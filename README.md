@@ -33,7 +33,7 @@ Recommended wrapper (interactive flow):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
-  -BridgeSourceRepoPath C:\Users\merhautr\python_projects\dms-provider-bridge \
+  -BridgeSourceRepoPath C:\dev\dms-provider-bridge \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
 ```
 
@@ -54,7 +54,7 @@ Silent mode (no prompts, installs plugin automatically when TC is detected):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
-  -BridgeSourceRepoPath C:\Users\merhautr\python_projects\dms-provider-bridge \
+  -BridgeSourceRepoPath C:\dev\dms-provider-bridge \
   -NssmExePath C:\tools\nssm\win64\nssm.exe \
   -Silent
 ```
@@ -63,8 +63,8 @@ Install:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 \
-  -BridgeSourceRepoPath C:\Users\merhautr\python_projects\dms-provider-bridge \
-  -WfxPluginBinaryPath C:\Users\merhautr\python_projects\tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll \
+  -BridgeSourceRepoPath C:\dev\dms-provider-bridge \
+  -WfxPluginBinaryPath C:\dev\tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
 ```
 
