@@ -5,7 +5,11 @@ param(
     [string]$BridgeReleaseZipPath,
     [string]$WfxPluginBinaryPath,
     [string]$WfxPluginTargetPath = "$env:APPDATA\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\TcWfxPlugin.wfx64",
-    [string]$NssmExePath
+    [string]$NssmExePath,
+    [int]$MinPythonMajor = 3,
+    [int]$MinPythonMinor = 11,
+    [int]$HealthTimeoutSeconds = 30,
+    [string]$HealthUrl = "http://127.0.0.1:8765/health"
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +28,65 @@ function Require-Command([string]$name) {
     return $cmd.Source
 }
 
+function Get-PythonVersionInfo([string]$pythonPath) {
+    $versionOutput = & $pythonPath --version 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to read Python version from: $pythonPath"
+    }
+
+    $versionText = ($versionOutput | Out-String).Trim()
+    Write-Host "Using Python: $versionText"
+
+    if ($versionText -notmatch "Python\s+(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)") {
+        throw "Unexpected Python version format: $versionText"
+    }
+
+    return @{
+        Major = [int]$Matches["major"]
+        Minor = [int]$Matches["minor"]
+        Patch = [int]$Matches["patch"]
+        Text = $versionText
+    }
+}
+
+function Assert-MinPythonVersion {
+    param(
+        [hashtable]$VersionInfo,
+        [int]$RequiredMajor,
+        [int]$RequiredMinor
+    )
+
+    $isTooOld = $VersionInfo.Major -lt $RequiredMajor -or ($VersionInfo.Major -eq $RequiredMajor -and $VersionInfo.Minor -lt $RequiredMinor)
+    if ($isTooOld) {
+        throw "Python $RequiredMajor.$RequiredMinor+ is required, detected $($VersionInfo.Text)"
+    }
+}
+
+function Wait-BridgeHealth {
+    param(
+        [string]$Url,
+        [int]$TimeoutSeconds
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $response = Invoke-RestMethod -Method Get -Uri $Url -TimeoutSec 5
+            if ($response.status -eq "ok") {
+                Write-Host "Bridge health check passed: $Url"
+                return
+            }
+        }
+        catch {
+            # Service can still be starting up.
+        }
+
+        Start-Sleep -Seconds 1
+    }
+
+    throw "Bridge health check did not pass within $TimeoutSeconds s: $Url"
+}
+
 if (-not (Test-IsAdministrator)) {
     throw "Install requires elevated PowerShell (Run as Administrator)."
 }
@@ -37,17 +100,29 @@ if ([string]::IsNullOrWhiteSpace($BridgeSourceRepoPath) -and [string]::IsNullOrW
 }
 
 $pythonExe = Require-Command "python"
+$pythonVersion = Get-PythonVersionInfo -pythonPath $pythonExe
+Assert-MinPythonVersion -VersionInfo $pythonVersion -RequiredMajor $MinPythonMajor -RequiredMinor $MinPythonMinor
+
 $repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $bridgeRoot = Join-Path $InstallRoot "bridge"
 $bridgeLogs = Join-Path $InstallRoot "logs"
 $configDir = Join-Path $bridgeRoot "config"
 $venvDir = Join-Path $bridgeRoot ".venv312"
 $venvPython = Join-Path $venvDir "Scripts\\python.exe"
+$backupRoot = Join-Path $InstallRoot "backup"
+$backupUserLocalPath = Join-Path $backupRoot "user.local.json"
+$existingUserLocalPath = Join-Path $bridgeRoot "config\\user.local.json"
 
 New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $bridgeLogs -Force | Out-Null
+New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
 
 if (Test-Path $bridgeRoot) {
+    if (Test-Path $existingUserLocalPath) {
+        Copy-Item -Path $existingUserLocalPath -Destination $backupUserLocalPath -Force
+        Write-Host "Backed up existing config: $existingUserLocalPath -> $backupUserLocalPath"
+    }
+
     Remove-Item -Path $bridgeRoot -Recurse -Force
 }
 New-Item -ItemType Directory -Path $bridgeRoot -Force | Out-Null
@@ -89,8 +164,13 @@ finally {
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 $userLocalPath = Join-Path $configDir "user.local.json"
 $templatePath = Join-Path $repoRoot "templates\\user.local.json"
-if (-not (Test-Path $userLocalPath)) {
+if (Test-Path $backupUserLocalPath) {
+    Copy-Item -Path $backupUserLocalPath -Destination $userLocalPath -Force
+    Write-Host "Restored user local config from backup: $userLocalPath"
+}
+elseif (-not (Test-Path $userLocalPath)) {
     Copy-Item -Path $templatePath -Destination $userLocalPath -Force
+    Write-Host "Created user local config from template: $userLocalPath"
 }
 
 & $NssmExePath stop $ServiceName | Out-Null
@@ -103,6 +183,7 @@ $appArgs = "-m uvicorn dms_provider_bridge.app.server:app --app-dir src --host 1
 & $NssmExePath set $ServiceName AppStderr (Join-Path $bridgeLogs "bridge-stderr.log")
 & $NssmExePath set $ServiceName Start SERVICE_AUTO_START
 & $NssmExePath start $ServiceName
+Wait-BridgeHealth -Url $HealthUrl -TimeoutSeconds $HealthTimeoutSeconds
 
 if (-not [string]::IsNullOrWhiteSpace($WfxPluginBinaryPath)) {
     if (-not (Test-Path $WfxPluginBinaryPath)) {

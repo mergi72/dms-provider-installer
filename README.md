@@ -16,6 +16,9 @@ Goals:
 - Installs/updates Windows Service via NSSM.
 - Copies the WFX plugin to Total Commander path.
 - Supports uninstall.
+- Validates Python version before install (default minimum 3.11).
+- Verifies bridge health endpoint after service start.
+- Preserves existing `config/user.local.json` during reinstall.
 
 ## Prerequisites
 
@@ -32,6 +35,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 \
   -BridgeSourceRepoPath C:\Users\merhautr\python_projects\dms-provider-bridge \
   -WfxPluginBinaryPath C:\Users\merhautr\python_projects\tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
+```
+
+Optional install hardening arguments:
+
+```powershell
+-MinPythonMajor 3 -MinPythonMinor 11
+-HealthTimeoutSeconds 30
+-HealthUrl http://127.0.0.1:8765/health
 ```
 
 Uninstall:
