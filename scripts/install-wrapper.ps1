@@ -9,7 +9,8 @@ param(
     [string]$WfxPluginConfigPath,
     [int]$HealthTimeoutSeconds = 30,
     [string]$HealthUrl = "http://127.0.0.1:8765/health",
-    [switch]$InstallPluginWhenTcDetected
+    [switch]$InstallPluginWhenTcDetected,
+    [switch]$Silent
 )
 
 $ErrorActionPreference = "Stop"
@@ -101,7 +102,7 @@ if ([string]::IsNullOrWhiteSpace($tcExe)) {
 
 Write-Host "Total Commander detected: $tcExe"
 $shouldInstallPlugin = $false
-if ($InstallPluginWhenTcDetected) {
+if ($Silent -or $InstallPluginWhenTcDetected) {
     $shouldInstallPlugin = $true
 }
 else {
@@ -138,3 +139,8 @@ else {
 
 Write-Host "WFX plugin files prepared: $pluginDir"
 Write-Host "Automatic wincmd.ini modification is intentionally skipped in this version."
+Write-Host ""
+Write-Host "Total Commander detected."
+Write-Host "Plugin files are ready in: $pluginDir"
+Write-Host "To add plugin in Total Commander:"
+Write-Host "Configuration -> Options -> Plugins -> File system plugins (WFX)."

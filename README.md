@@ -46,6 +46,19 @@ Wrapper behavior:
 - If confirmed, copies plugin + config to `%LOCALAPPDATA%\DMSProvider\TCPlugin`.
 - Does not modify `wincmd.ini` automatically.
 
+After WFX file preparation, wrapper prints manual registration guidance:
+
+- Total Commander -> Configuration -> Options -> Plugins -> File system plugins (WFX).
+
+Silent mode (no prompts, installs plugin automatically when TC is detected):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
+  -BridgeSourceRepoPath C:\Users\merhautr\python_projects\dms-provider-bridge \
+  -NssmExePath C:\tools\nssm\win64\nssm.exe \
+  -Silent
+```
+
 Install:
 
 ```powershell
