@@ -72,7 +72,7 @@ Install:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 \
   -BridgeSourceRepoPath C:\dev\dms-provider-bridge \
-  -WfxPluginBinaryPath C:\dev\tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll \
+  -WfxPluginBinaryPath C:\dev\tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.wfx64 \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
 ```
 
@@ -91,3 +91,15 @@ Uninstall:
 powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1 \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
 ```
+
+## Troubleshooting
+
+- Service does not start:
+  - check service state and NSSM configuration
+  - check installer runtime logs under `%ProgramData%\DmsProviderBridge\logs`
+- Health check fails (`http://127.0.0.1:8765/health`):
+  - verify port `8765` is not blocked or used by another process
+  - verify service is running (`DmsProviderBridge`)
+- Total Commander plugin cannot reach bridge:
+  - open `http://127.0.0.1:8765/health` manually
+  - verify deployed plugin files exist in `%LOCALAPPDATA%\DMSProvider\TCPlugin`

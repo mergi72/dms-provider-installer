@@ -84,6 +84,7 @@ function Resolve-PluginSourcePaths {
     $workspaceRoot = Split-Path -Parent $RepoRoot
     $defaultBinaryCandidates = @(
         $ExplicitBinaryPath,
+        (Join-Path $workspaceRoot "tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.wfx64"),
         (Join-Path $workspaceRoot "tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll")
     )
 
