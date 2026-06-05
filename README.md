@@ -1,38 +1,42 @@
 # dms-provider-installer
 
-Samostatny instalacni projekt pro nasazeni dms-provider-bridge jako Windows Service a instalaci TC WFX pluginu.
+Standalone installer project for deploying dms-provider-bridge as a Windows Service and installing the Total Commander WFX plugin.
 
-Cile:
-- Udrzet bridge repo ciste (jen aplikace/API).
-- Udrzet tc-wfx-plugin repo ciste (jen plugin kod).
-- Mit jedno misto pro deployment kroky (venv, service, config, plugin copy, uninstall).
+Goals:
+- Keep the bridge repository clean (application/API only).
+- Keep the tc-wfx-plugin repository clean (plugin code only).
+- Provide one place for deployment steps (venv, service, config, plugin copy, uninstall).
 
-## Co tento projekt dela
+## What This Project Does
 
-- Pripravi bridge runtime z release ZIPu nebo z lokalniho checkoutu.
-- Vytvori Python virtual environment.
-- Nainstaluje Python dependencies.
-- Vytvori user local konfiguraci.
-- Nainstaluje/aktualizuje Windows Service pres NSSM.
-- Zkopiruje WFX plugin do Total Commander cesty.
-- Umozni uninstall.
+- Prepares bridge runtime from a release ZIP or local checkout.
+- Creates a Python virtual environment.
+- Installs Python dependencies.
+- Creates user-local configuration.
+- Installs/updates Windows Service via NSSM.
+- Copies the WFX plugin to Total Commander path.
+- Supports uninstall.
 
-## Predpoklady
+## Prerequisites
 
-- PowerShell spusteny jako Administrator.
-- Python 3.11+ na stroji.
-- NSSM binarka dostupna lokalne (napr. tools/nssm/nssm.exe).
+- PowerShell running as Administrator.
+- Python 3.11+ installed on the machine.
+- NSSM binary available locally (for example `tools/nssm/nssm.exe`).
 
-## Rychle prikazy
+## Quick Commands
 
 Install:
 
+```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 \
   -BridgeSourceRepoPath C:\Users\merhautr\python_projects\dms-provider-bridge \
   -WfxPluginBinaryPath C:\Users\merhautr\python_projects\tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
+```
 
 Uninstall:
 
+```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1 \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
+```
