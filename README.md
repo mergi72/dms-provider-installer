@@ -19,6 +19,7 @@ Goals:
 - Validates Python version before install (default minimum 3.11).
 - Verifies bridge health endpoint after service start.
 - Preserves existing `config/user.local.json` during reinstall.
+- Provides a wrapper flow: bridge service install -> health check -> Total Commander detection -> optional WFX file deployment.
 
 ## Prerequisites
 
@@ -27,6 +28,23 @@ Goals:
 - NSSM binary available locally (for example `tools/nssm/nssm.exe`).
 
 ## Quick Commands
+
+Recommended wrapper (interactive flow):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
+  -BridgeSourceRepoPath C:\Users\merhautr\python_projects\dms-provider-bridge \
+  -NssmExePath C:\tools\nssm\win64\nssm.exe
+```
+
+Wrapper behavior:
+
+- Installs bridge as Windows Service (via `install.ps1`).
+- Verifies `http://127.0.0.1:8765/health`.
+- Detects Total Commander in common install paths.
+- Asks whether WFX files should be prepared.
+- If confirmed, copies plugin + config to `%LOCALAPPDATA%\DMSProvider\TCPlugin`.
+- Does not modify `wincmd.ini` automatically.
 
 Install:
 
