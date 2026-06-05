@@ -41,10 +41,16 @@ Wrapper behavior:
 
 - Installs bridge as Windows Service (via `install.ps1`).
 - Verifies `http://127.0.0.1:8765/health`.
-- Detects Total Commander in common install paths.
+- Detects Total Commander in common install paths, with registry fallback (`HKCU/HKLM\Software\Ghisler\Total Commander`).
 - Asks whether WFX files should be prepared.
 - If confirmed, copies plugin + config to `%LOCALAPPDATA%\DMSProvider\TCPlugin`.
 - Does not modify `wincmd.ini` automatically.
+
+Prepared plugin layout:
+
+- `%LOCALAPPDATA%\DMSProvider\TCPlugin\TcWfxPlugin.wfx64`
+- `%LOCALAPPDATA%\DMSProvider\TCPlugin\config\config.json`
+- `%LOCALAPPDATA%\DMSProvider\TCPlugin\logs\`
 
 After WFX file preparation, wrapper prints manual registration guidance:
 

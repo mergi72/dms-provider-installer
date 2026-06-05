@@ -34,7 +34,44 @@ function Resolve-TcExecutable {
         "C:\Program Files (x86)\totalcmd\TOTALCMD.EXE"
     )
 
-    return Resolve-FirstExistingPath -Candidates $tcPaths
+    $tcExe = Resolve-FirstExistingPath -Candidates $tcPaths
+    if (-not [string]::IsNullOrWhiteSpace($tcExe)) {
+        return $tcExe
+    }
+
+    $registryLocations = @(
+        "Registry::HKEY_CURRENT_USER\Software\Ghisler\Total Commander",
+        "Registry::HKEY_LOCAL_MACHINE\Software\Ghisler\Total Commander",
+        "Registry::HKEY_LOCAL_MACHINE\Software\WOW6432Node\Ghisler\Total Commander"
+    )
+
+    foreach ($location in $registryLocations) {
+        try {
+            $item = Get-ItemProperty -Path $location -ErrorAction Stop
+            $installRootCandidates = @(
+                $item.InstallDir,
+                $item.InstallPath,
+                $item.Path
+            ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+            foreach ($installRoot in $installRootCandidates) {
+                $exeCandidates = @(
+                    (Join-Path $installRoot "TOTALCMD64.EXE"),
+                    (Join-Path $installRoot "TOTALCMD.EXE")
+                )
+
+                $tcExe = Resolve-FirstExistingPath -Candidates $exeCandidates
+                if (-not [string]::IsNullOrWhiteSpace($tcExe)) {
+                    return $tcExe
+                }
+            }
+        }
+        catch {
+            # Registry key can be missing on this machine; continue probing.
+        }
+    }
+
+    return $null
 }
 
 function Resolve-PluginSourcePaths {
@@ -124,10 +161,12 @@ if ([string]::IsNullOrWhiteSpace($pluginSources.Binary)) {
 
 $pluginDir = $PluginDeployRoot
 $configDir = Join-Path $pluginDir "config"
+$logsDir = Join-Path $pluginDir "logs"
 $pluginTarget = Join-Path $pluginDir "TcWfxPlugin.wfx64"
 
 New-Item -ItemType Directory -Path $pluginDir -Force | Out-Null
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 
 Copy-Item -Path $pluginSources.Binary -Destination $pluginTarget -Force
 if (-not [string]::IsNullOrWhiteSpace($pluginSources.Config)) {
@@ -138,6 +177,7 @@ else {
 }
 
 Write-Host "WFX plugin files prepared: $pluginDir"
+Write-Host "WFX log directory prepared: $logsDir"
 Write-Host "Automatic wincmd.ini modification is intentionally skipped in this version."
 Write-Host ""
 Write-Host "Total Commander detected."
