@@ -1,0 +1,21 @@
+# Logs and runtime outputs
+*.log
+logs/
+
+# Temp and build artifacts
+.tmp/
+tmp/
+out/
+dist/
+
+# Python env/cache
+.venv/
+.venv312/
+__pycache__/
+*.pyc
+
+# OS/editor noise
+.vscode/
+.idea/
+*.user
+*.suo
