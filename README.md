@@ -3,6 +3,9 @@
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
 [![Version](https://img.shields.io/badge/Version-v0.1.0--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
+Current development branch: `develop`  
+Stable release branch: `main`
+
 Standalone installer project for deploying dms-provider-bridge as a Windows Service and installing the Total Commander WFX plugin.
 
 Installs:
