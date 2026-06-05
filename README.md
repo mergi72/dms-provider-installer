@@ -2,6 +2,23 @@
 
 Standalone installer project for deploying dms-provider-bridge as a Windows Service and installing the Total Commander WFX plugin.
 
+Installs:
+- DMS Provider Bridge
+- Windows Service (NSSM)
+- Total Commander WFX Plugin (optional)
+
+Supported:
+- Windows 10/11
+- Total Commander 64-bit
+
+Related projects:
+- dms-provider-bridge
+- tc-wfx-plugin
+
+Disclaimer:
+- This installer currently supports the Alfresco provider.
+- eDoCat-specific provider support is still under development.
+
 Goals:
 - Keep the bridge repository clean (application/API only).
 - Keep the tc-wfx-plugin repository clean (plugin code only).
