@@ -48,6 +48,11 @@ Wrapper behavior:
 - If confirmed, copies plugin + config to `%LOCALAPPDATA%\DMSProvider\TCPlugin`.
 - Does not modify `wincmd.ini` automatically.
 
+Important:
+
+- `install.ps1` installs bridge service only.
+- WFX plugin deployment is handled only by `install-wrapper.ps1`.
+
 Prepared plugin layout:
 
 - `%LOCALAPPDATA%\DMSProvider\TCPlugin\TcWfxPlugin.wfx64`
@@ -72,7 +77,6 @@ Install:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 \
   -BridgeSourceRepoPath C:\dev\dms-provider-bridge \
-  -WfxPluginBinaryPath C:\dev\tc-wfx-plugin\artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.wfx64 \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
 ```
 

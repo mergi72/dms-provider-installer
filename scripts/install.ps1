@@ -3,8 +3,6 @@ param(
     [string]$InstallRoot = "$env:ProgramData\\DmsProviderBridge",
     [string]$BridgeSourceRepoPath,
     [string]$BridgeReleaseZipPath,
-    [string]$WfxPluginBinaryPath,
-    [string]$WfxPluginTargetPath = "$env:APPDATA\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\TcWfxPlugin.wfx64",
     [string]$NssmExePath,
     [int]$MinPythonMajor = 3,
     [int]$MinPythonMinor = 11,
@@ -194,16 +192,6 @@ Write-Host "Install root:   $InstallRoot"
 Write-Host "Bridge runtime: $bridgeRoot"
 Write-Host "Venv:           $venvDir"
 Write-Host "Logs:           $bridgeLogs"
-
-if (-not [string]::IsNullOrWhiteSpace($WfxPluginBinaryPath)) {
-    if (-not (Test-Path $WfxPluginBinaryPath)) {
-        throw "WFX plugin binary not found: $WfxPluginBinaryPath"
-    }
-
-    $wfxTargetDir = Split-Path -Parent $WfxPluginTargetPath
-    New-Item -ItemType Directory -Path $wfxTargetDir -Force | Out-Null
-    Copy-Item -Path $WfxPluginBinaryPath -Destination $WfxPluginTargetPath -Force
-}
 
 Write-Host "Install finished. Service: $ServiceName"
 Write-Host "Bridge root: $bridgeRoot"
