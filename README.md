@@ -20,6 +20,8 @@ Goals:
 - Verifies bridge health endpoint after service start.
 - Preserves existing `config/user.local.json` during reinstall.
 - Provides a wrapper flow: bridge service install -> health check -> Total Commander detection -> optional WFX file deployment.
+- Uses a version-agnostic virtual environment directory (`.venv`) by default.
+- Prints runtime summary after health check (URL/service/install paths).
 
 ## Prerequisites
 
@@ -80,6 +82,7 @@ Optional install hardening arguments:
 -MinPythonMajor 3 -MinPythonMinor 11
 -HealthTimeoutSeconds 30
 -HealthUrl http://127.0.0.1:8765/health
+-VenvDirectoryName .venv
 ```
 
 Uninstall:

@@ -9,7 +9,8 @@ param(
     [int]$MinPythonMajor = 3,
     [int]$MinPythonMinor = 11,
     [int]$HealthTimeoutSeconds = 30,
-    [string]$HealthUrl = "http://127.0.0.1:8765/health"
+    [string]$HealthUrl = "http://127.0.0.1:8765/health",
+    [string]$VenvDirectoryName = ".venv"
 )
 
 $ErrorActionPreference = "Stop"
@@ -107,7 +108,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $bridgeRoot = Join-Path $InstallRoot "bridge"
 $bridgeLogs = Join-Path $InstallRoot "logs"
 $configDir = Join-Path $bridgeRoot "config"
-$venvDir = Join-Path $bridgeRoot ".venv312"
+$venvDir = Join-Path $bridgeRoot $VenvDirectoryName
 $venvPython = Join-Path $venvDir "Scripts\\python.exe"
 $backupRoot = Join-Path $InstallRoot "backup"
 $backupUserLocalPath = Join-Path $backupRoot "user.local.json"
@@ -184,6 +185,15 @@ $appArgs = "-m uvicorn dms_provider_bridge.app.server:app --app-dir src --host 1
 & $NssmExePath set $ServiceName Start SERVICE_AUTO_START
 & $NssmExePath start $ServiceName
 Wait-BridgeHealth -Url $HealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+
+Write-Host ""
+Write-Host "Bridge runtime summary"
+Write-Host "Bridge URL:     $HealthUrl"
+Write-Host "Service:        $ServiceName"
+Write-Host "Install root:   $InstallRoot"
+Write-Host "Bridge runtime: $bridgeRoot"
+Write-Host "Venv:           $venvDir"
+Write-Host "Logs:           $bridgeLogs"
 
 if (-not [string]::IsNullOrWhiteSpace($WfxPluginBinaryPath)) {
     if (-not (Test-Path $WfxPluginBinaryPath)) {
