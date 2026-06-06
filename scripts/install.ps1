@@ -284,6 +284,7 @@ else {
 & $NssmExePath set $ServiceName AppDirectory $InstallRoot
 & $NssmExePath set $ServiceName AppStdout $stdoutLog
 & $NssmExePath set $ServiceName AppStderr $stderrLog
+& $NssmExePath set $ServiceName AppEnvironmentExtra "DMS_PROVIDER_CONFIG_DIR=$bridgeConfigTargetDir"
 
 if ($ServiceAccount -eq "LocalSystem") {
     & $NssmExePath set $ServiceName ObjectName LocalSystem
