@@ -7,6 +7,12 @@ logs/
 tmp/
 out/
 dist/
+artifacts/
+payload/bridge/*.exe
+payload/bridge/config/*.json
+payload/tc-wfx/*.wfx64
+payload/tc-wfx/config.json
+payload/nssm.exe
 
 # Python env/cache
 .venv/

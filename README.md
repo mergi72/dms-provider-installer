@@ -1,14 +1,18 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.1.0--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.2.2--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+
+Current development branch: `develop`  
+Stable release branch: `main`
 
 Standalone installer project for deploying dms-provider-bridge as a Windows Service and installing the Total Commander WFX plugin.
 
 Installs:
 - DMS Provider Bridge
 - Windows Service (NSSM)
-- Total Commander WFX Plugin (optional)
+- Total Commander WFX plugin (`TcWfxPlugin.wfx64`)
+- Plugin config (`config.json`)
 
 Supported:
 - Windows 10/11
@@ -25,37 +29,69 @@ Disclaimer:
 Goals:
 - Keep the bridge repository clean (application/API only).
 - Keep the tc-wfx-plugin repository clean (plugin code only).
-- Provide one place for deployment steps (venv, service, config, plugin copy, uninstall).
+- Provide one place for deployment steps (service install, health check, uninstall).
 
 ## What This Project Does
 
-- Prepares bridge runtime from a release ZIP or local checkout.
-- Creates a Python virtual environment.
-- Installs Python dependencies.
-- Creates user-local configuration.
+- Installs prebuilt bridge executable.
+- Installs WFX plugin into `%ProgramFiles%\DMS Provider\TcWfxPlugin.wfx64`.
+- Installs plugin config into `%ProgramFiles%\DMS Provider\config.json`.
 - Installs/updates Windows Service via NSSM.
-- Copies the WFX plugin to Total Commander path.
 - Supports uninstall.
-- Validates Python version before install (default minimum 3.11).
 - Verifies bridge health endpoint after service start.
-- Preserves existing `config/user.local.json` during reinstall.
-- Provides a wrapper flow: bridge service install -> health check -> Total Commander detection -> optional WFX file deployment.
-- Uses a version-agnostic virtual environment directory (`.venv`) by default.
+- If Total Commander config is found, registers plugin automatically in `wincmd.ini` under `[FileSystemPlugins64]`.
+- Creates `wincmd.ini` backup before modification.
+- Provides manual plugin path when Total Commander config is not found.
+- Provides a wrapper flow: bridge service install -> health check -> plugin install/registration.
 - Prints runtime summary after health check (URL/service/install paths).
 
 ## Prerequisites
 
 - PowerShell running as Administrator.
-- Python 3.11+ installed on the machine.
 - NSSM binary available locally (for example `tools/nssm/nssm.exe`).
+- Prebuilt `dms-provider-bridge.exe` available (for example from bridge repo `dist/`).
+- Built WFX plugin and config available from `tc-wfx-plugin` repo.
 
 ## Quick Commands
+
+Build single installer EXE (Inno Setup):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-inno-installer.ps1 \
+  -BridgeRepoPath C:\dev\dms-provider-bridge \
+  -TcPluginRepoPath C:\dev\tc-wfx-plugin
+```
+
+Build script does:
+
+- prepares payload (bridge exe + WFX + config)
+- copies `nssm.exe` into payload (from `-NssmExePath` or common local paths)
+- compiles [installer.iss](installer.iss) into one installer EXE
+
+Installer output:
+
+- `artifacts\installer\DmsProviderInstaller-v0.2.2-alpha.exe`
+
+Prepare payload from bridge build output:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\prepare-payload.ps1 \
+  -BridgeRepoPath C:\dev\dms-provider-bridge \
+  -TcPluginRepoPath C:\dev\tc-wfx-plugin
+```
+
+This copies all required files into payload:
+
+- `payload\bridge\dms-provider-bridge.exe`
+- `payload\bridge\config\*.json`
+- `payload\tc-wfx\TcWfxPlugin.wfx64`
+- `payload\tc-wfx\config.json`
 
 Recommended wrapper (interactive flow):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
-  -BridgeSourceRepoPath C:\dev\dms-provider-bridge \
+  -BridgeExePath C:\dev\dms-provider-bridge\dist\dms-provider-bridge.exe \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
 ```
 
@@ -63,31 +99,28 @@ Wrapper behavior:
 
 - Installs bridge as Windows Service (via `install.ps1`).
 - Verifies `http://127.0.0.1:8765/health`.
-- Detects Total Commander in common install paths, with registry fallback (`HKCU/HKLM\Software\Ghisler\Total Commander`).
-- Asks whether WFX files should be prepared.
-- If confirmed, copies plugin + config to `%LOCALAPPDATA%\DMSProvider\TCPlugin`.
-- Does not modify `wincmd.ini` automatically.
+- Installs plugin bundle into `%ProgramFiles%\DMS Provider`.
+- Tries to register WFX plugin automatically in Total Commander config.
+- Creates backup of `wincmd.ini` before editing.
+- If Total Commander config is not found, prints plugin path for manual registration.
+
+Default payload behavior:
+
+- If `-BridgeExePath` is not provided, installer looks for `payload/bridge/dms-provider-bridge.exe` (fallback: `payload/dms-provider-bridge.exe`).
+- If `-WfxPluginPath` is not provided, installer looks for `payload/tc-wfx/TcWfxPlugin.wfx64` (fallback: `payload/TcWfxPlugin.wfx64`).
+- If `-PluginConfigPath` is not provided, installer looks for `payload/tc-wfx/config.json` (fallback: `payload/config.json`).
+- Bridge config directory defaults to `payload/bridge/config` (fallback: `payload/config`) and copied into `%ProgramFiles%\DMS Provider\config`.
 
 Important:
 
-- `install.ps1` installs bridge service only.
-- WFX plugin deployment is handled only by `install-wrapper.ps1`.
-
-Prepared plugin layout:
-
-- `%LOCALAPPDATA%\DMSProvider\TCPlugin\TcWfxPlugin.wfx64`
-- `%LOCALAPPDATA%\DMSProvider\TCPlugin\config\config.json`
-- `%LOCALAPPDATA%\DMSProvider\TCPlugin\logs\`
-
-After WFX file preparation, wrapper prints manual registration guidance:
-
-- Total Commander -> Configuration -> Options -> Plugins -> File system plugins (WFX).
+- Current installer phase installs bridge + service + WFX plugin + config.
+- Automatic TC registration can be disabled with `-DisableTcRegistration`.
 
 Silent mode (no prompts, installs plugin automatically when TC is detected):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
-  -BridgeSourceRepoPath C:\dev\dms-provider-bridge \
+  -BridgeExePath C:\dev\dms-provider-bridge\dist\dms-provider-bridge.exe \
   -NssmExePath C:\tools\nssm\win64\nssm.exe \
   -Silent
 ```
@@ -96,17 +129,45 @@ Install:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 \
-  -BridgeSourceRepoPath C:\dev\dms-provider-bridge \
+  -BridgeExePath C:\dev\dms-provider-bridge\dist\dms-provider-bridge.exe \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
 ```
 
-Optional install hardening arguments:
+Optional install arguments:
 
 ```powershell
--MinPythonMajor 3 -MinPythonMinor 11
 -HealthTimeoutSeconds 30
 -HealthUrl http://127.0.0.1:8765/health
--VenvDirectoryName .venv
+-WinCmdIniPath C:\Users\<user>\AppData\Roaming\GHISLER\wincmd.ini
+-DisableTcRegistration
+-ServiceAccount LocalSystem|CurrentUser|CustomUser
+-ServiceUserName DOMAIN\user
+-ServicePassword <password>
+```
+
+Service account notes:
+
+- `LocalSystem` (default): best for machine-level deployment, but may not see user-only Credential Manager entries.
+- `CurrentUser`: runs service under the installing user account (requires `-ServicePassword`).
+- `CustomUser`: runs service under explicit account (`-ServiceUserName` + `-ServicePassword`).
+
+Example (CurrentUser):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
+  -NssmExePath C:\tools\nssm\win64\nssm.exe \
+  -ServiceAccount CurrentUser \
+  -ServicePassword "<user-password>"
+```
+
+Example (CustomUser):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
+  -NssmExePath C:\tools\nssm\win64\nssm.exe \
+  -ServiceAccount CustomUser \
+  -ServiceUserName "DOMAIN\\svc-dms" \
+  -ServicePassword "<service-password>"
 ```
 
 Uninstall:
@@ -116,14 +177,21 @@ powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1 \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
 ```
 
+Manual compile (if needed):
+
+```powershell
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" .\installer.iss
+```
+
 ## Troubleshooting
 
 - Service does not start:
   - check service state and NSSM configuration
-  - check installer runtime logs under `%ProgramData%\DmsProviderBridge\logs`
+  - check installer runtime logs under `%ProgramFiles%\DMS Provider\logs`
 - Health check fails (`http://127.0.0.1:8765/health`):
   - verify port `8765` is not blocked or used by another process
   - verify service is running (`DmsProviderBridge`)
-- Total Commander plugin cannot reach bridge:
-  - open `http://127.0.0.1:8765/health` manually
-  - verify deployed plugin files exist in `%LOCALAPPDATA%\DMSProvider\TCPlugin`
+- Plugin not visible in Total Commander:
+  - verify `%ProgramFiles%\DMS Provider\TcWfxPlugin.wfx64` exists
+  - verify installer output for detected `wincmd.ini` path and backup creation
+  - if auto-registration was skipped, add plugin manually in Total Commander (WFX -> Add)

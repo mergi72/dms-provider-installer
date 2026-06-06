@@ -1,14 +1,19 @@
 param(
     [string]$ServiceName = "DmsProviderBridge",
-    [string]$InstallRoot = "$env:ProgramData\\DmsProviderBridge",
-    [string]$BridgeSourceRepoPath,
-    [string]$BridgeReleaseZipPath,
+    [string]$InstallRoot = "$env:ProgramFiles\\DMS Provider",
+    [string]$BridgeExePath,
+    [string]$WfxPluginPath,
+    [string]$PluginConfigPath,
+    [string]$BridgeConfigDirPath,
     [string]$NssmExePath,
-    [int]$MinPythonMajor = 3,
-    [int]$MinPythonMinor = 11,
+    [ValidateSet("LocalSystem", "CurrentUser", "CustomUser")]
+    [string]$ServiceAccount = "LocalSystem",
+    [string]$ServiceUserName,
+    [string]$ServicePassword,
     [int]$HealthTimeoutSeconds = 30,
     [string]$HealthUrl = "http://127.0.0.1:8765/health",
-    [string]$VenvDirectoryName = ".venv"
+    [string]$WinCmdIniPath,
+    [switch]$DisableTcRegistration
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,48 +22,6 @@ function Test-IsAdministrator {
     $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal]::new($currentIdentity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-function Require-Command([string]$name) {
-    $cmd = Get-Command $name -ErrorAction SilentlyContinue
-    if (-not $cmd) {
-        throw "Command not found: $name"
-    }
-    return $cmd.Source
-}
-
-function Get-PythonVersionInfo([string]$pythonPath) {
-    $versionOutput = & $pythonPath --version 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to read Python version from: $pythonPath"
-    }
-
-    $versionText = ($versionOutput | Out-String).Trim()
-    Write-Host "Using Python: $versionText"
-
-    if ($versionText -notmatch "Python\s+(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)") {
-        throw "Unexpected Python version format: $versionText"
-    }
-
-    return @{
-        Major = [int]$Matches["major"]
-        Minor = [int]$Matches["minor"]
-        Patch = [int]$Matches["patch"]
-        Text = $versionText
-    }
-}
-
-function Assert-MinPythonVersion {
-    param(
-        [hashtable]$VersionInfo,
-        [int]$RequiredMajor,
-        [int]$RequiredMinor
-    )
-
-    $isTooOld = $VersionInfo.Major -lt $RequiredMajor -or ($VersionInfo.Major -eq $RequiredMajor -and $VersionInfo.Minor -lt $RequiredMinor)
-    if ($isTooOld) {
-        throw "Python $RequiredMajor.$RequiredMinor+ is required, detected $($VersionInfo.Text)"
-    }
 }
 
 function Wait-BridgeHealth {
@@ -86,6 +49,160 @@ function Wait-BridgeHealth {
     throw "Bridge health check did not pass within $TimeoutSeconds s: $Url"
 }
 
+function Resolve-FirstExistingPath {
+    param([string[]]$Candidates)
+
+    foreach ($candidate in $Candidates) {
+        if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-Path $candidate)) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    return $null
+}
+
+function Resolve-TcWinCmdIniPath {
+    param([string]$ExplicitPath)
+
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitPath) -and (Test-Path $ExplicitPath)) {
+        return (Resolve-Path $ExplicitPath).Path
+    }
+
+    $registryLocations = @(
+        "Registry::HKEY_CURRENT_USER\\Software\\Ghisler\\Total Commander",
+        "Registry::HKEY_LOCAL_MACHINE\\Software\\Ghisler\\Total Commander",
+        "Registry::HKEY_LOCAL_MACHINE\\Software\\WOW6432Node\\Ghisler\\Total Commander"
+    )
+
+    foreach ($location in $registryLocations) {
+        try {
+            $item = Get-ItemProperty -Path $location -ErrorAction Stop
+            $iniCandidates = @(
+                $item.IniFileName
+                $item.Wini
+                $item.WinIni
+            )
+
+            if ($item.InstallDir) {
+                $iniCandidates += Join-Path $item.InstallDir "wincmd.ini"
+            }
+
+            if ($item.Path) {
+                $iniCandidates += Join-Path $item.Path "wincmd.ini"
+            }
+
+            $found = Resolve-FirstExistingPath -Candidates $iniCandidates
+            if (-not [string]::IsNullOrWhiteSpace($found)) {
+                return $found
+            }
+        }
+        catch {
+            # Key can be missing depending on installation type.
+        }
+    }
+
+    $pathCandidates = @(
+        "$env:APPDATA\\GHISLER\\wincmd.ini",
+        "$env:LOCALAPPDATA\\GHISLER\\wincmd.ini",
+        "$env:ProgramFiles\\totalcmd\\wincmd.ini",
+        "$env:ProgramFiles(x86)\\totalcmd\\wincmd.ini",
+        "C:\\totalcmd\\wincmd.ini"
+    )
+
+    return Resolve-FirstExistingPath -Candidates $pathCandidates
+}
+
+function Backup-File {
+    param([string]$Path)
+
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $backupPath = "$Path.$stamp.bak"
+    Copy-Item -Path $Path -Destination $backupPath -Force
+    return $backupPath
+}
+
+function Register-WfxPlugin {
+    param(
+        [string]$IniPath,
+        [string]$PluginPath
+    )
+
+    $entryLine = "DMS Provider=$PluginPath"
+    $sectionName = "[FileSystemPlugins64]"
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    if (Test-Path $IniPath) {
+        foreach ($line in (Get-Content -Path $IniPath)) {
+            [void]$lines.Add($line)
+        }
+    }
+
+    $sectionIndex = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i].Trim() -ieq $sectionName) {
+            $sectionIndex = $i
+            break
+        }
+    }
+
+    if ($sectionIndex -lt 0) {
+        if ($lines.Count -gt 0 -and $lines[$lines.Count - 1].Trim().Length -gt 0) {
+            [void]$lines.Add("")
+        }
+        [void]$lines.Add($sectionName)
+        [void]$lines.Add($entryLine)
+    }
+    else {
+        $nextSectionIndex = $lines.Count
+        for ($i = $sectionIndex + 1; $i -lt $lines.Count; $i++) {
+            if ($lines[$i].Trim() -match "^\[.+\]$") {
+                $nextSectionIndex = $i
+                break
+            }
+        }
+
+        $entryIndex = -1
+        for ($i = $sectionIndex + 1; $i -lt $nextSectionIndex; $i++) {
+            if ($lines[$i].Trim() -match "^DMS Provider\s*=") {
+                $entryIndex = $i
+                break
+            }
+        }
+
+        if ($entryIndex -ge 0) {
+            $lines[$entryIndex] = $entryLine
+        }
+        else {
+            $lines.Insert($nextSectionIndex, $entryLine)
+        }
+    }
+
+    Set-Content -Path $IniPath -Value $lines -Encoding ASCII
+}
+
+
+function Resolve-ServiceUserName {
+    param([string]$Mode, [string]$ExplicitUserName)
+
+    if ($Mode -eq "CustomUser") {
+        if ([string]::IsNullOrWhiteSpace($ExplicitUserName)) {
+            throw "ServiceAccount=CustomUser requires -ServiceUserName."
+        }
+        return $ExplicitUserName
+    }
+
+    if ($Mode -eq "CurrentUser") {
+        $envUser = $env:USERNAME
+        $envDomain = $env:USERDOMAIN
+        if ([string]::IsNullOrWhiteSpace($envUser)) {
+            throw "ServiceAccount=CurrentUser could not resolve USERNAME from environment."
+        }
+        return if ([string]::IsNullOrWhiteSpace($envDomain)) { $envUser } else { "$envDomain\\$envUser" }
+    }
+
+    return ""
+}
+
 if (-not (Test-IsAdministrator)) {
     throw "Install requires elevated PowerShell (Run as Administrator)."
 }
@@ -94,105 +211,125 @@ if ([string]::IsNullOrWhiteSpace($NssmExePath) -or -not (Test-Path $NssmExePath)
     throw "NSSM executable not found. Provide -NssmExePath."
 }
 
-if ([string]::IsNullOrWhiteSpace($BridgeSourceRepoPath) -and [string]::IsNullOrWhiteSpace($BridgeReleaseZipPath)) {
-    throw "Provide either -BridgeSourceRepoPath or -BridgeReleaseZipPath."
+if ([string]::IsNullOrWhiteSpace($BridgeExePath)) {
+    $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $repoRoot = Split-Path -Parent $scriptRoot
+    $BridgeExePath = Resolve-FirstExistingPath -Candidates @(
+        (Join-Path $repoRoot "payload\\bridge\\dms-provider-bridge.exe"),
+        (Join-Path $repoRoot "payload\\dms-provider-bridge.exe")
+    )
+    if ([string]::IsNullOrWhiteSpace($WfxPluginPath)) {
+        $WfxPluginPath = Resolve-FirstExistingPath -Candidates @(
+            (Join-Path $repoRoot "payload\\tc-wfx\\TcWfxPlugin.wfx64"),
+            (Join-Path $repoRoot "payload\\TcWfxPlugin.wfx64")
+        )
+    }
+    if ([string]::IsNullOrWhiteSpace($PluginConfigPath)) {
+        $PluginConfigPath = Resolve-FirstExistingPath -Candidates @(
+            (Join-Path $repoRoot "payload\\tc-wfx\\config.json"),
+            (Join-Path $repoRoot "payload\\config.json")
+        )
+    }
+    if ([string]::IsNullOrWhiteSpace($BridgeConfigDirPath)) {
+        $BridgeConfigDirPath = Resolve-FirstExistingPath -Candidates @(
+            (Join-Path $repoRoot "payload\\bridge\\config"),
+            (Join-Path $repoRoot "payload\\config")
+        )
+    }
 }
 
-$pythonExe = Require-Command "python"
-$pythonVersion = Get-PythonVersionInfo -pythonPath $pythonExe
-Assert-MinPythonVersion -VersionInfo $pythonVersion -RequiredMajor $MinPythonMajor -RequiredMinor $MinPythonMinor
+if (-not (Test-Path $BridgeExePath)) {
+    throw "Bridge executable not found: $BridgeExePath"
+}
 
-$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$bridgeRoot = Join-Path $InstallRoot "bridge"
+if ([string]::IsNullOrWhiteSpace($WfxPluginPath) -or -not (Test-Path $WfxPluginPath)) {
+    throw "WFX plugin not found: $WfxPluginPath"
+}
+
+if ([string]::IsNullOrWhiteSpace($PluginConfigPath) -or -not (Test-Path $PluginConfigPath)) {
+    throw "Plugin config not found: $PluginConfigPath"
+}
+
+$bridgeExeTargetPath = Join-Path $InstallRoot "dms-provider-bridge.exe"
+$pluginTargetPath = Join-Path $InstallRoot "TcWfxPlugin.wfx64"
+$pluginConfigTargetPath = Join-Path $InstallRoot "config.json"
+$pluginConfigDir = Join-Path $InstallRoot "config"
+$pluginConfigDirTargetPath = Join-Path $pluginConfigDir "config.json"
+$bridgeConfigTargetDir = Join-Path $InstallRoot "config"
 $bridgeLogs = Join-Path $InstallRoot "logs"
-$configDir = Join-Path $bridgeRoot "config"
-$venvDir = Join-Path $bridgeRoot $VenvDirectoryName
-$venvPython = Join-Path $venvDir "Scripts\\python.exe"
-$backupRoot = Join-Path $InstallRoot "backup"
-$backupUserLocalPath = Join-Path $backupRoot "user.local.json"
-$existingUserLocalPath = Join-Path $bridgeRoot "config\\user.local.json"
+$stdoutLog = Join-Path $bridgeLogs "bridge-stdout.log"
+$stderrLog = Join-Path $bridgeLogs "bridge-stderr.log"
 
 New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $bridgeLogs -Force | Out-Null
-New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $pluginConfigDir -Force | Out-Null
+New-Item -ItemType Directory -Path $bridgeConfigTargetDir -Force | Out-Null
 
-if (Test-Path $bridgeRoot) {
-    if (Test-Path $existingUserLocalPath) {
-        Copy-Item -Path $existingUserLocalPath -Destination $backupUserLocalPath -Force
-        Write-Host "Backed up existing config: $existingUserLocalPath -> $backupUserLocalPath"
-    }
+Copy-Item -Path $BridgeExePath -Destination $bridgeExeTargetPath -Force
+Copy-Item -Path $WfxPluginPath -Destination $pluginTargetPath -Force
+Copy-Item -Path $PluginConfigPath -Destination $pluginConfigTargetPath -Force
+Copy-Item -Path $PluginConfigPath -Destination $pluginConfigDirTargetPath -Force
 
-    Remove-Item -Path $bridgeRoot -Recurse -Force
-}
-New-Item -ItemType Directory -Path $bridgeRoot -Force | Out-Null
-
-if (-not [string]::IsNullOrWhiteSpace($BridgeReleaseZipPath)) {
-    if (-not (Test-Path $BridgeReleaseZipPath)) {
-        throw "Bridge release ZIP not found: $BridgeReleaseZipPath"
-    }
-    Expand-Archive -Path $BridgeReleaseZipPath -DestinationPath $bridgeRoot -Force
+if (-not [string]::IsNullOrWhiteSpace($BridgeConfigDirPath) -and (Test-Path $BridgeConfigDirPath)) {
+    Copy-Item -Path (Join-Path $BridgeConfigDirPath "*.json") -Destination $bridgeConfigTargetDir -Force
 }
 else {
-    if (-not (Test-Path $BridgeSourceRepoPath)) {
-        throw "Bridge source repo path not found: $BridgeSourceRepoPath"
+    Write-Host "Bridge config directory not found, skipping bridge config copy."
+}
+
+& $NssmExePath stop $ServiceName | Out-Null 2>&1
+& $NssmExePath remove $ServiceName confirm | Out-Null 2>&1
+
+& $NssmExePath install $ServiceName $bridgeExeTargetPath
+& $NssmExePath set $ServiceName AppDirectory $InstallRoot
+& $NssmExePath set $ServiceName AppStdout $stdoutLog
+& $NssmExePath set $ServiceName AppStderr $stderrLog
+
+if ($ServiceAccount -eq "LocalSystem") {
+    & $NssmExePath set $ServiceName ObjectName LocalSystem
+}
+else {
+    $resolvedServiceUser = Resolve-ServiceUserName -Mode $ServiceAccount -ExplicitUserName $ServiceUserName
+    if ([string]::IsNullOrWhiteSpace($ServicePassword)) {
+        throw "ServiceAccount=$ServiceAccount requires -ServicePassword."
     }
-
-    robocopy $BridgeSourceRepoPath $bridgeRoot /E /NFL /NDL /NJH /NJS /NP /XD .git .venv .venv312 artifacts .pytest_cache .mypy_cache
-    if ($LASTEXITCODE -ge 8) {
-        throw "robocopy failed with code $LASTEXITCODE"
-    }
+    & $NssmExePath set $ServiceName ObjectName $resolvedServiceUser $ServicePassword
 }
 
-& $pythonExe -m venv $venvDir
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to create venv at $venvDir"
-}
-
-Push-Location $bridgeRoot
-try {
-    & $venvPython -m pip install --upgrade pip
-    if ($LASTEXITCODE -ne 0) { throw "pip upgrade failed" }
-
-    & $venvPython -m pip install -e .
-    if ($LASTEXITCODE -ne 0) { throw "bridge dependency install failed" }
-}
-finally {
-    Pop-Location
-}
-
-New-Item -ItemType Directory -Path $configDir -Force | Out-Null
-$userLocalPath = Join-Path $configDir "user.local.json"
-$templatePath = Join-Path $repoRoot "templates\\user.local.json"
-if (Test-Path $backupUserLocalPath) {
-    Copy-Item -Path $backupUserLocalPath -Destination $userLocalPath -Force
-    Write-Host "Restored user local config from backup: $userLocalPath"
-}
-elseif (-not (Test-Path $userLocalPath)) {
-    Copy-Item -Path $templatePath -Destination $userLocalPath -Force
-    Write-Host "Created user local config from template: $userLocalPath"
-}
-
-& $NssmExePath stop $ServiceName | Out-Null
-& $NssmExePath remove $ServiceName confirm | Out-Null
-
-$appArgs = "-m uvicorn dms_provider_bridge.app.server:app --app-dir src --host 127.0.0.1 --port 8765"
-& $NssmExePath install $ServiceName $venvPython $appArgs
-& $NssmExePath set $ServiceName AppDirectory $bridgeRoot
-& $NssmExePath set $ServiceName AppStdout (Join-Path $bridgeLogs "bridge-stdout.log")
-& $NssmExePath set $ServiceName AppStderr (Join-Path $bridgeLogs "bridge-stderr.log")
 & $NssmExePath set $ServiceName Start SERVICE_AUTO_START
 & $NssmExePath start $ServiceName
 Wait-BridgeHealth -Url $HealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+
+if (-not $DisableTcRegistration) {
+    $resolvedIniPath = Resolve-TcWinCmdIniPath -ExplicitPath $WinCmdIniPath
+    if (-not [string]::IsNullOrWhiteSpace($resolvedIniPath)) {
+        $iniBackup = Backup-File -Path $resolvedIniPath
+        Register-WfxPlugin -IniPath $resolvedIniPath -PluginPath $pluginTargetPath
+        Write-Host "Total Commander plugin registration updated: $resolvedIniPath"
+        Write-Host "Backup created: $iniBackup"
+    }
+    else {
+        Write-Host "Total Commander config not found."
+        Write-Host "Manual registration path: $pluginTargetPath"
+    }
+}
+else {
+    Write-Host "Automatic Total Commander registration disabled."
+    Write-Host "Manual registration path: $pluginTargetPath"
+}
 
 Write-Host ""
 Write-Host "Bridge runtime summary"
 Write-Host "Bridge URL:     $HealthUrl"
 Write-Host "Service:        $ServiceName"
 Write-Host "Install root:   $InstallRoot"
-Write-Host "Bridge runtime: $bridgeRoot"
-Write-Host "Venv:           $venvDir"
+Write-Host "Bridge exe:     $bridgeExeTargetPath"
+Write-Host "WFX plugin:     $pluginTargetPath"
+Write-Host "Plugin config:  $pluginConfigTargetPath"
+Write-Host "Bridge config:  $bridgeConfigTargetDir"
+Write-Host "Service user:   $(if ($ServiceAccount -eq 'LocalSystem') { 'LocalSystem' } elseif ($ServiceAccount -eq 'CurrentUser') { Resolve-ServiceUserName -Mode 'CurrentUser' -ExplicitUserName '' } else { $ServiceUserName })"
 Write-Host "Logs:           $bridgeLogs"
 
 Write-Host "Install finished. Service: $ServiceName"
-Write-Host "Bridge root: $bridgeRoot"
+Write-Host "Bridge exe: $bridgeExeTargetPath"
 Write-Host "Logs: $bridgeLogs"
