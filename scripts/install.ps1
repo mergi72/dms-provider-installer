@@ -4,6 +4,7 @@ param(
     [string]$BridgeExePath,
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
+    [string]$BridgeConfigDirPath,
     [string]$NssmExePath,
     [ValidateSet("LocalSystem", "CurrentUser", "CustomUser")]
     [string]$ServiceAccount = "LocalSystem",
@@ -213,12 +214,27 @@ if ([string]::IsNullOrWhiteSpace($NssmExePath) -or -not (Test-Path $NssmExePath)
 if ([string]::IsNullOrWhiteSpace($BridgeExePath)) {
     $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
     $repoRoot = Split-Path -Parent $scriptRoot
-    $BridgeExePath = Join-Path $repoRoot "payload\\dms-provider-bridge.exe"
+    $BridgeExePath = Resolve-FirstExistingPath -Candidates @(
+        (Join-Path $repoRoot "payload\\bridge\\dms-provider-bridge.exe"),
+        (Join-Path $repoRoot "payload\\dms-provider-bridge.exe")
+    )
     if ([string]::IsNullOrWhiteSpace($WfxPluginPath)) {
-        $WfxPluginPath = Join-Path $repoRoot "payload\\TcWfxPlugin.wfx64"
+        $WfxPluginPath = Resolve-FirstExistingPath -Candidates @(
+            (Join-Path $repoRoot "payload\\tc-wfx\\TcWfxPlugin.wfx64"),
+            (Join-Path $repoRoot "payload\\TcWfxPlugin.wfx64")
+        )
     }
     if ([string]::IsNullOrWhiteSpace($PluginConfigPath)) {
-        $PluginConfigPath = Join-Path $repoRoot "payload\\config.json"
+        $PluginConfigPath = Resolve-FirstExistingPath -Candidates @(
+            (Join-Path $repoRoot "payload\\tc-wfx\\config.json"),
+            (Join-Path $repoRoot "payload\\config.json")
+        )
+    }
+    if ([string]::IsNullOrWhiteSpace($BridgeConfigDirPath)) {
+        $BridgeConfigDirPath = Resolve-FirstExistingPath -Candidates @(
+            (Join-Path $repoRoot "payload\\bridge\\config"),
+            (Join-Path $repoRoot "payload\\config")
+        )
     }
 }
 
@@ -239,6 +255,7 @@ $pluginTargetPath = Join-Path $InstallRoot "TcWfxPlugin.wfx64"
 $pluginConfigTargetPath = Join-Path $InstallRoot "config.json"
 $pluginConfigDir = Join-Path $InstallRoot "config"
 $pluginConfigDirTargetPath = Join-Path $pluginConfigDir "config.json"
+$bridgeConfigTargetDir = Join-Path $InstallRoot "config"
 $bridgeLogs = Join-Path $InstallRoot "logs"
 $stdoutLog = Join-Path $bridgeLogs "bridge-stdout.log"
 $stderrLog = Join-Path $bridgeLogs "bridge-stderr.log"
@@ -246,11 +263,19 @@ $stderrLog = Join-Path $bridgeLogs "bridge-stderr.log"
 New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $bridgeLogs -Force | Out-Null
 New-Item -ItemType Directory -Path $pluginConfigDir -Force | Out-Null
+New-Item -ItemType Directory -Path $bridgeConfigTargetDir -Force | Out-Null
 
 Copy-Item -Path $BridgeExePath -Destination $bridgeExeTargetPath -Force
 Copy-Item -Path $WfxPluginPath -Destination $pluginTargetPath -Force
 Copy-Item -Path $PluginConfigPath -Destination $pluginConfigTargetPath -Force
 Copy-Item -Path $PluginConfigPath -Destination $pluginConfigDirTargetPath -Force
+
+if (-not [string]::IsNullOrWhiteSpace($BridgeConfigDirPath) -and (Test-Path $BridgeConfigDirPath)) {
+    Copy-Item -Path (Join-Path $BridgeConfigDirPath "*.json") -Destination $bridgeConfigTargetDir -Force
+}
+else {
+    Write-Host "Bridge config directory not found, skipping bridge config copy."
+}
 
 & $NssmExePath stop $ServiceName | Out-Null 2>&1
 & $NssmExePath remove $ServiceName confirm | Out-Null 2>&1
@@ -301,6 +326,7 @@ Write-Host "Install root:   $InstallRoot"
 Write-Host "Bridge exe:     $bridgeExeTargetPath"
 Write-Host "WFX plugin:     $pluginTargetPath"
 Write-Host "Plugin config:  $pluginConfigTargetPath"
+Write-Host "Bridge config:  $bridgeConfigTargetDir"
 Write-Host "Service user:   $(if ($ServiceAccount -eq 'LocalSystem') { 'LocalSystem' } elseif ($ServiceAccount -eq 'CurrentUser') { Resolve-ServiceUserName -Mode 'CurrentUser' -ExplicitUserName '' } else { $ServiceUserName })"
 Write-Host "Logs:           $bridgeLogs"
 

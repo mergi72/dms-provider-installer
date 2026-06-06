@@ -71,13 +71,21 @@ if ([string]::IsNullOrWhiteSpace($resolvedNssmPath)) {
 }
 
 & $preparePayloadScript -BridgeRepoPath $BridgeRepoPath -TcPluginRepoPath $TcPluginRepoPath
-if ($LASTEXITCODE -ne 0) {
-    throw "prepare-payload.ps1 failed with exit code $LASTEXITCODE"
+if (-not $?) {
+    throw "prepare-payload.ps1 failed."
 }
 
 $payloadDir = Join-Path $repoRoot "payload"
 $payloadNssmPath = Join-Path $payloadDir "nssm.exe"
-Copy-Item -Path $resolvedNssmPath -Destination $payloadNssmPath -Force
+$resolvedNssmSourcePath = (Resolve-Path $resolvedNssmPath).Path
+$resolvedNssmTargetPath = $null
+if (Test-Path $payloadNssmPath) {
+    $resolvedNssmTargetPath = (Resolve-Path $payloadNssmPath).Path
+}
+
+if ($resolvedNssmSourcePath -ne $resolvedNssmTargetPath) {
+    Copy-Item -Path $resolvedNssmPath -Destination $payloadNssmPath -Force
+}
 
 Write-Host "Payload prepared for Inno Setup build."
 Write-Host "NSSM copied: $payloadNssmPath"

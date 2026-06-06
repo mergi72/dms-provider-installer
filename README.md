@@ -1,7 +1,7 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.1.0--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.2.2--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -70,7 +70,7 @@ Build script does:
 
 Installer output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.2.1-alpha.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.2.2-alpha.exe`
 
 Prepare payload from bridge build output:
 
@@ -82,9 +82,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\prepare-payload.ps1 \
 
 This copies all required files into payload:
 
-- `payload\dms-provider-bridge.exe`
-- `payload\TcWfxPlugin.wfx64`
-- `payload\config.json`
+- `payload\bridge\dms-provider-bridge.exe`
+- `payload\bridge\config\*.json`
+- `payload\tc-wfx\TcWfxPlugin.wfx64`
+- `payload\tc-wfx\config.json`
 
 Recommended wrapper (interactive flow):
 
@@ -105,9 +106,10 @@ Wrapper behavior:
 
 Default payload behavior:
 
-- If `-BridgeExePath` is not provided, installer looks for `payload/dms-provider-bridge.exe` in this repository.
-- If `-WfxPluginPath` is not provided, installer looks for `payload/TcWfxPlugin.wfx64`.
-- If `-PluginConfigPath` is not provided, installer looks for `payload/config.json`.
+- If `-BridgeExePath` is not provided, installer looks for `payload/bridge/dms-provider-bridge.exe` (fallback: `payload/dms-provider-bridge.exe`).
+- If `-WfxPluginPath` is not provided, installer looks for `payload/tc-wfx/TcWfxPlugin.wfx64` (fallback: `payload/TcWfxPlugin.wfx64`).
+- If `-PluginConfigPath` is not provided, installer looks for `payload/tc-wfx/config.json` (fallback: `payload/config.json`).
+- Bridge config directory defaults to `payload/bridge/config` (fallback: `payload/config`) and copied into `%ProgramFiles%\DMS Provider\config`.
 
 Important:
 
