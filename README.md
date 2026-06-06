@@ -138,6 +138,34 @@ Optional install arguments:
 -HealthUrl http://127.0.0.1:8765/health
 -WinCmdIniPath C:\Users\<user>\AppData\Roaming\GHISLER\wincmd.ini
 -DisableTcRegistration
+-ServiceAccount LocalSystem|CurrentUser|CustomUser
+-ServiceUserName DOMAIN\user
+-ServicePassword <password>
+```
+
+Service account notes:
+
+- `LocalSystem` (default): best for machine-level deployment, but may not see user-only Credential Manager entries.
+- `CurrentUser`: runs service under the installing user account (requires `-ServicePassword`).
+- `CustomUser`: runs service under explicit account (`-ServiceUserName` + `-ServicePassword`).
+
+Example (CurrentUser):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
+  -NssmExePath C:\tools\nssm\win64\nssm.exe \
+  -ServiceAccount CurrentUser \
+  -ServicePassword "<user-password>"
+```
+
+Example (CustomUser):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
+  -NssmExePath C:\tools\nssm\win64\nssm.exe \
+  -ServiceAccount CustomUser \
+  -ServiceUserName "DOMAIN\\svc-dms" \
+  -ServicePassword "<service-password>"
 ```
 
 Uninstall:

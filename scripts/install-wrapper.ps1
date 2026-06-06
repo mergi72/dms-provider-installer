@@ -5,6 +5,10 @@ param(
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
     [string]$NssmExePath,
+    [ValidateSet("LocalSystem", "CurrentUser", "CustomUser")]
+    [string]$ServiceAccount = "LocalSystem",
+    [string]$ServiceUserName,
+    [string]$ServicePassword,
     [int]$HealthTimeoutSeconds = 30,
     [string]$HealthUrl = "http://127.0.0.1:8765/health",
     [string]$WinCmdIniPath,
@@ -26,8 +30,17 @@ $installParams = @{
     ServiceName = $ServiceName
     InstallRoot = $InstallRoot
     NssmExePath = $NssmExePath
+    ServiceAccount = $ServiceAccount
     HealthTimeoutSeconds = $HealthTimeoutSeconds
     HealthUrl = $HealthUrl
+}
+
+if (-not [string]::IsNullOrWhiteSpace($ServiceUserName)) {
+    $installParams.ServiceUserName = $ServiceUserName
+}
+
+if (-not [string]::IsNullOrWhiteSpace($ServicePassword)) {
+    $installParams.ServicePassword = $ServicePassword
 }
 
 if (-not [string]::IsNullOrWhiteSpace($BridgeExePath)) {

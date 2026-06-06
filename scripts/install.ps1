@@ -5,6 +5,10 @@ param(
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
     [string]$NssmExePath,
+    [ValidateSet("LocalSystem", "CurrentUser", "CustomUser")]
+    [string]$ServiceAccount = "LocalSystem",
+    [string]$ServiceUserName,
+    [string]$ServicePassword,
     [int]$HealthTimeoutSeconds = 30,
     [string]$HealthUrl = "http://127.0.0.1:8765/health",
     [string]$WinCmdIniPath,
@@ -175,6 +179,29 @@ function Register-WfxPlugin {
     Set-Content -Path $IniPath -Value $lines -Encoding ASCII
 }
 
+
+function Resolve-ServiceUserName {
+    param([string]$Mode, [string]$ExplicitUserName)
+
+    if ($Mode -eq "CustomUser") {
+        if ([string]::IsNullOrWhiteSpace($ExplicitUserName)) {
+            throw "ServiceAccount=CustomUser requires -ServiceUserName."
+        }
+        return $ExplicitUserName
+    }
+
+    if ($Mode -eq "CurrentUser") {
+        $envUser = $env:USERNAME
+        $envDomain = $env:USERDOMAIN
+        if ([string]::IsNullOrWhiteSpace($envUser)) {
+            throw "ServiceAccount=CurrentUser could not resolve USERNAME from environment."
+        }
+        return if ([string]::IsNullOrWhiteSpace($envDomain)) { $envUser } else { "$envDomain\\$envUser" }
+    }
+
+    return ""
+}
+
 if (-not (Test-IsAdministrator)) {
     throw "Install requires elevated PowerShell (Run as Administrator)."
 }
@@ -232,6 +259,18 @@ Copy-Item -Path $PluginConfigPath -Destination $pluginConfigDirTargetPath -Force
 & $NssmExePath set $ServiceName AppDirectory $InstallRoot
 & $NssmExePath set $ServiceName AppStdout $stdoutLog
 & $NssmExePath set $ServiceName AppStderr $stderrLog
+
+if ($ServiceAccount -eq "LocalSystem") {
+    & $NssmExePath set $ServiceName ObjectName LocalSystem
+}
+else {
+    $resolvedServiceUser = Resolve-ServiceUserName -Mode $ServiceAccount -ExplicitUserName $ServiceUserName
+    if ([string]::IsNullOrWhiteSpace($ServicePassword)) {
+        throw "ServiceAccount=$ServiceAccount requires -ServicePassword."
+    }
+    & $NssmExePath set $ServiceName ObjectName $resolvedServiceUser $ServicePassword
+}
+
 & $NssmExePath set $ServiceName Start SERVICE_AUTO_START
 & $NssmExePath start $ServiceName
 Wait-BridgeHealth -Url $HealthUrl -TimeoutSeconds $HealthTimeoutSeconds
@@ -262,6 +301,7 @@ Write-Host "Install root:   $InstallRoot"
 Write-Host "Bridge exe:     $bridgeExeTargetPath"
 Write-Host "WFX plugin:     $pluginTargetPath"
 Write-Host "Plugin config:  $pluginConfigTargetPath"
+Write-Host "Service user:   $(if ($ServiceAccount -eq 'LocalSystem') { 'LocalSystem' } elseif ($ServiceAccount -eq 'CurrentUser') { Resolve-ServiceUserName -Mode 'CurrentUser' -ExplicitUserName '' } else { $ServiceUserName })"
 Write-Host "Logs:           $bridgeLogs"
 
 Write-Host "Install finished. Service: $ServiceName"
