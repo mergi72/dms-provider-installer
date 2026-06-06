@@ -54,6 +54,24 @@ Goals:
 
 ## Quick Commands
 
+Build single installer EXE (Inno Setup):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-inno-installer.ps1 \
+  -BridgeRepoPath C:\dev\dms-provider-bridge \
+  -TcPluginRepoPath C:\dev\tc-wfx-plugin
+```
+
+Build script does:
+
+- prepares payload (bridge exe + WFX + config)
+- copies `nssm.exe` into payload (from `-NssmExePath` or common local paths)
+- compiles [installer.iss](installer.iss) into one installer EXE
+
+Installer output:
+
+- `artifacts\installer\DmsProviderInstaller-v0.2.0-alpha.exe`
+
 Prepare payload from bridge build output:
 
 ```powershell
@@ -127,6 +145,12 @@ Uninstall:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1 \
   -NssmExePath C:\tools\nssm\win64\nssm.exe
+```
+
+Manual compile (if needed):
+
+```powershell
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" .\installer.iss
 ```
 
 ## Troubleshooting
