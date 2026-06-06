@@ -2,9 +2,13 @@ param(
     [string]$ServiceName = "DmsProviderBridge",
     [string]$InstallRoot = "$env:ProgramFiles\DMS Provider",
     [string]$BridgeExePath,
+    [string]$WfxPluginPath,
+    [string]$PluginConfigPath,
     [string]$NssmExePath,
     [int]$HealthTimeoutSeconds = 30,
     [string]$HealthUrl = "http://127.0.0.1:8765/health",
+    [string]$WinCmdIniPath,
+    [switch]$DisableTcRegistration,
     [switch]$Silent
 )
 
@@ -30,6 +34,22 @@ if (-not [string]::IsNullOrWhiteSpace($BridgeExePath)) {
     $installParams.BridgeExePath = $BridgeExePath
 }
 
+if (-not [string]::IsNullOrWhiteSpace($WfxPluginPath)) {
+    $installParams.WfxPluginPath = $WfxPluginPath
+}
+
+if (-not [string]::IsNullOrWhiteSpace($PluginConfigPath)) {
+    $installParams.PluginConfigPath = $PluginConfigPath
+}
+
+if (-not [string]::IsNullOrWhiteSpace($WinCmdIniPath)) {
+    $installParams.WinCmdIniPath = $WinCmdIniPath
+}
+
+if ($DisableTcRegistration) {
+    $installParams.DisableTcRegistration = $true
+}
+
 & $installScript @installParams
 if ($LASTEXITCODE -ne 0) {
     throw "Bridge service installation failed with exit code $LASTEXITCODE"
@@ -37,5 +57,5 @@ if ($LASTEXITCODE -ne 0) {
 
 if (-not $Silent) {
     Write-Host "Bridge installation and health check finished."
-    Write-Host "Phase 1-3 complete: bridge.exe + NSSM service + auto start."
+    Write-Host "Bundle installed: bridge.exe + service + TcWfxPlugin.wfx64 + config.json."
 }

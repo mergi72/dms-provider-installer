@@ -1,10 +1,8 @@
 param(
     [string]$ServiceName = "DmsProviderBridge",
     [string]$InstallRoot = "$env:ProgramFiles\\DMS Provider",
-    [string]$WfxPluginDeployRoot = "$env:LOCALAPPDATA\\DMSProvider\\TCPlugin",
     [string]$NssmExePath,
-    [switch]$KeepBridgeFiles,
-    [switch]$KeepWfxPlugin
+    [switch]$KeepBridgeFiles
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,10 +26,6 @@ if ([string]::IsNullOrWhiteSpace($NssmExePath) -or -not (Test-Path $NssmExePath)
 
 if (-not $KeepBridgeFiles -and (Test-Path $InstallRoot)) {
     Remove-Item -Path $InstallRoot -Recurse -Force
-}
-
-if (-not $KeepWfxPlugin -and (Test-Path $WfxPluginDeployRoot)) {
-    Remove-Item -Path $WfxPluginDeployRoot -Recurse -Force
 }
 
 Write-Host "Uninstall finished. Service removed: $ServiceName"

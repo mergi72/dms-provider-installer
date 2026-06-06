@@ -9,6 +9,7 @@ out/
 dist/
 payload/*.exe
 payload/*.wfx64
+payload/config.json
 
 # Python env/cache
 .venv/
