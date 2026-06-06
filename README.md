@@ -70,7 +70,7 @@ Build script does:
 
 Installer output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.2.0-alpha.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.2.1-alpha.exe`
 
 Prepare payload from bridge build output:
 
