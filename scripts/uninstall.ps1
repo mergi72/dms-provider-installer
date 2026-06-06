@@ -1,7 +1,7 @@
 param(
     [string]$ServiceName = "DmsProviderBridge",
-    [string]$InstallRoot = "$env:ProgramData\\DmsProviderBridge",
-    [string]$WfxPluginTargetPath = "$env:APPDATA\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\TcWfxPlugin.wfx64",
+    [string]$InstallRoot = "$env:ProgramFiles\\DMS Provider",
+    [string]$WfxPluginDeployRoot = "$env:LOCALAPPDATA\\DMSProvider\\TCPlugin",
     [string]$NssmExePath,
     [switch]$KeepBridgeFiles,
     [switch]$KeepWfxPlugin
@@ -23,15 +23,15 @@ if ([string]::IsNullOrWhiteSpace($NssmExePath) -or -not (Test-Path $NssmExePath)
     throw "NSSM executable not found. Provide -NssmExePath."
 }
 
-& $NssmExePath stop $ServiceName | Out-Null
-& $NssmExePath remove $ServiceName confirm | Out-Null
+& $NssmExePath stop $ServiceName | Out-Null 2>&1
+& $NssmExePath remove $ServiceName confirm | Out-Null 2>&1
 
 if (-not $KeepBridgeFiles -and (Test-Path $InstallRoot)) {
     Remove-Item -Path $InstallRoot -Recurse -Force
 }
 
-if (-not $KeepWfxPlugin -and (Test-Path $WfxPluginTargetPath)) {
-    Remove-Item -Path $WfxPluginTargetPath -Force
+if (-not $KeepWfxPlugin -and (Test-Path $WfxPluginDeployRoot)) {
+    Remove-Item -Path $WfxPluginDeployRoot -Recurse -Force
 }
 
 Write-Host "Uninstall finished. Service removed: $ServiceName"
