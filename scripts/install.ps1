@@ -73,12 +73,18 @@ function Resolve-TcWinCmdIniPath {
         try {
             $item = Get-ItemProperty -Path $location -ErrorAction Stop
             $iniCandidates = @(
-                $item.IniFileName,
-                $item.Wini,
-                $item.WinIni,
-                if ($item.InstallDir) { Join-Path $item.InstallDir "wincmd.ini" },
-                if ($item.Path) { Join-Path $item.Path "wincmd.ini" }
+                $item.IniFileName
+                $item.Wini
+                $item.WinIni
             )
+
+            if ($item.InstallDir) {
+                $iniCandidates += Join-Path $item.InstallDir "wincmd.ini"
+            }
+
+            if ($item.Path) {
+                $iniCandidates += Join-Path $item.Path "wincmd.ini"
+            }
 
             $found = Resolve-FirstExistingPath -Candidates $iniCandidates
             if (-not [string]::IsNullOrWhiteSpace($found)) {
