@@ -46,6 +46,15 @@ Goals:
 
 ## Quick Commands
 
+Prepare payload from bridge build output:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\prepare-payload.ps1 \
+  -BridgeRepoPath C:\dev\dms-provider-bridge
+```
+
+This copies `dist\dms-provider-bridge.exe` from bridge repo into this repo as `payload\dms-provider-bridge.exe`.
+
 Recommended wrapper (interactive flow):
 
 ```powershell
