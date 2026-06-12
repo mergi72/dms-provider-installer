@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.2-alpha] - 2026-06-12
+
+### Changed
+
+- Refreshed orchestrator payload for DMS Provider Bridge v0.4.18.
+- Kept Credential Broker payload on v0.2.9.
+- Updated manual install documentation to reference the current bridge setup version.
+
 ## [v0.3.1-alpha] - 2026-06-12
 
 ### Changed

@@ -1,7 +1,7 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.3.1--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.3.2--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -58,7 +58,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.3.1-alpha.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.3.2-alpha.exe`
 
 Prepare payload only:
 
@@ -85,7 +85,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1
 Useful options:
 
 ```powershell
--BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.4.17.exe
+-BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.4.18.exe
 -BrokerSetupPath C:\path\CredentialBrokerSetup-v0.2.9.exe
 -WfxPluginPath C:\path\TcWfxPlugin.wfx64
 -PluginConfigPath C:\path\config.json
