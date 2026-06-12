@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.1-alpha] - 2026-06-12
+
+### Changed
+
+- Refreshed orchestrator payload for DMS Provider Bridge v0.4.17.
+- Kept Credential Broker payload on v0.2.9.
+- Updated manual install documentation to reference the current bridge setup version.
+
 ## [v0.3.0-alpha] - 2026-06-12
 
 ### Changed
@@ -36,3 +44,4 @@ All notable changes to this project will be documented in this file.
 
 - Build orchestrator now validates `prepare-payload.ps1` success correctly.
 - Build orchestrator no longer fails when `nssm.exe` source and destination paths are identical.
+
