@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.0-alpha] - 2026-06-12
+
+### Changed
+
+- Converted installer project into an orchestrator for dedicated component installers.
+- Bridge deployment is now delegated to `DmsProviderBridgeSetup.exe`.
+- Credential Broker deployment is now delegated to `CredentialBrokerSetup.exe`.
+- WFX plugin installation and Total Commander registration remain owned by this project.
+- Payload layout now uses `payload/installers/` for child setup EXEs and `payload/tc-wfx/` for the plugin bundle.
+
+### Removed
+
+- Direct bridge executable deployment.
+- Direct NSSM service setup.
+- Direct bridge config bundling and copying.
+- `DMS_PROVIDER_CONFIG_DIR` setup from this installer.
+
 ## [v0.2.2-alpha] - 2026-06-06
 
 ### Added

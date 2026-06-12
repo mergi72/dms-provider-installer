@@ -1,18 +1,16 @@
 param(
-    [string]$ServiceName = "DmsProviderBridge",
-    [string]$InstallRoot = "$env:ProgramFiles\\DMS Provider",
-    [string]$BridgeExePath,
+    [string]$InstallRoot = "$env:ProgramFiles\DMS Provider",
+    [string]$BridgeSetupPath,
+    [string]$BrokerSetupPath,
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
-    [string]$BridgeConfigDirPath,
-    [string]$NssmExePath,
-    [ValidateSet("LocalSystem", "CurrentUser", "CustomUser")]
-    [string]$ServiceAccount = "LocalSystem",
-    [string]$ServiceUserName,
-    [string]$ServicePassword,
-    [int]$HealthTimeoutSeconds = 30,
-    [string]$HealthUrl = "http://127.0.0.1:8765/health",
+    [int]$HealthTimeoutSeconds = 60,
+    [string]$BridgeHealthUrl = "http://127.0.0.1:8765/health",
+    [string]$BrokerHealthUrl = "http://127.0.0.1:8776/health",
     [string]$WinCmdIniPath,
+    [switch]$SkipBridge,
+    [switch]$SkipBroker,
+    [switch]$SkipHealthCheck,
     [switch]$DisableTcRegistration
 )
 
@@ -22,31 +20,6 @@ function Test-IsAdministrator {
     $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal]::new($currentIdentity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-function Wait-BridgeHealth {
-    param(
-        [string]$Url,
-        [int]$TimeoutSeconds
-    )
-
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    while ((Get-Date) -lt $deadline) {
-        try {
-            $response = Invoke-RestMethod -Method Get -Uri $Url -TimeoutSec 5
-            if ($response.status -eq "ok") {
-                Write-Host "Bridge health check passed: $Url"
-                return
-            }
-        }
-        catch {
-            # Service can still be starting up.
-        }
-
-        Start-Sleep -Seconds 1
-    }
-
-    throw "Bridge health check did not pass within $TimeoutSeconds s: $Url"
 }
 
 function Resolve-FirstExistingPath {
@@ -69,9 +42,9 @@ function Resolve-TcWinCmdIniPath {
     }
 
     $registryLocations = @(
-        "Registry::HKEY_CURRENT_USER\\Software\\Ghisler\\Total Commander",
-        "Registry::HKEY_LOCAL_MACHINE\\Software\\Ghisler\\Total Commander",
-        "Registry::HKEY_LOCAL_MACHINE\\Software\\WOW6432Node\\Ghisler\\Total Commander"
+        "Registry::HKEY_CURRENT_USER\Software\Ghisler\Total Commander",
+        "Registry::HKEY_LOCAL_MACHINE\Software\Ghisler\Total Commander",
+        "Registry::HKEY_LOCAL_MACHINE\Software\WOW6432Node\Ghisler\Total Commander"
     )
 
     foreach ($location in $registryLocations) {
@@ -97,16 +70,16 @@ function Resolve-TcWinCmdIniPath {
             }
         }
         catch {
-            # Key can be missing depending on installation type.
+            # Total Commander can be portable or absent.
         }
     }
 
     $pathCandidates = @(
-        "$env:APPDATA\\GHISLER\\wincmd.ini",
-        "$env:LOCALAPPDATA\\GHISLER\\wincmd.ini",
-        "$env:ProgramFiles\\totalcmd\\wincmd.ini",
-        "$env:ProgramFiles(x86)\\totalcmd\\wincmd.ini",
-        "C:\\totalcmd\\wincmd.ini"
+        "$env:APPDATA\GHISLER\wincmd.ini",
+        "$env:LOCALAPPDATA\GHISLER\wincmd.ini",
+        "$env:ProgramFiles\totalcmd\wincmd.ini",
+        "$env:ProgramFiles(x86)\totalcmd\wincmd.ini",
+        "C:\totalcmd\wincmd.ini"
     )
 
     return Resolve-FirstExistingPath -Candidates $pathCandidates
@@ -180,66 +153,98 @@ function Register-WfxPlugin {
     Set-Content -Path $IniPath -Value $lines -Encoding ASCII
 }
 
+function Invoke-SetupInstaller {
+    param(
+        [string]$Name,
+        [string]$Path
+    )
 
-function Resolve-ServiceUserName {
-    param([string]$Mode, [string]$ExplicitUserName)
-
-    if ($Mode -eq "CustomUser") {
-        if ([string]::IsNullOrWhiteSpace($ExplicitUserName)) {
-            throw "ServiceAccount=CustomUser requires -ServiceUserName."
-        }
-        return $ExplicitUserName
+    if (-not (Test-Path $Path)) {
+        throw "$Name setup not found: $Path"
     }
 
-    if ($Mode -eq "CurrentUser") {
-        $envUser = $env:USERNAME
-        $envDomain = $env:USERDOMAIN
-        if ([string]::IsNullOrWhiteSpace($envUser)) {
-            throw "ServiceAccount=CurrentUser could not resolve USERNAME from environment."
+    Write-Host "Starting $Name setup: $Path"
+    $process = Start-Process -FilePath $Path -ArgumentList @("/SP-", "/NORESTART") -Wait -PassThru -WindowStyle Normal
+    if ($process.ExitCode -ne 0) {
+        throw "$Name setup failed with exit code $($process.ExitCode)."
+    }
+    Write-Host "$Name setup finished."
+}
+
+function Wait-Health {
+    param(
+        [string]$Name,
+        [string]$Url,
+        [int]$TimeoutSeconds
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $response = Invoke-RestMethod -Method Get -Uri $Url -TimeoutSec 5
+            if ($response.ok -eq $true -or $response.status -eq "ok" -or $response.service) {
+                Write-Host "$Name health check passed: $Url"
+                return
+            }
         }
-        return if ([string]::IsNullOrWhiteSpace($envDomain)) { $envUser } else { "$envDomain\\$envUser" }
+        catch {
+            # Child setup can still be finishing startup.
+        }
+        Start-Sleep -Seconds 1
     }
 
-    return ""
+    throw "$Name health check did not pass within $TimeoutSeconds s: $Url"
 }
 
 if (-not (Test-IsAdministrator)) {
     throw "Install requires elevated PowerShell (Run as Administrator)."
 }
 
-if ([string]::IsNullOrWhiteSpace($NssmExePath) -or -not (Test-Path $NssmExePath)) {
-    throw "NSSM executable not found. Provide -NssmExePath."
-}
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent $scriptRoot
 
-if ([string]::IsNullOrWhiteSpace($BridgeExePath)) {
-    $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-    $repoRoot = Split-Path -Parent $scriptRoot
-    $BridgeExePath = Resolve-FirstExistingPath -Candidates @(
-        (Join-Path $repoRoot "payload\\bridge\\dms-provider-bridge.exe"),
-        (Join-Path $repoRoot "payload\\dms-provider-bridge.exe")
+if ([string]::IsNullOrWhiteSpace($BridgeSetupPath)) {
+    $BridgeSetupPath = Resolve-FirstExistingPath -Candidates @(
+        (Join-Path $scriptRoot "installers\DmsProviderBridgeSetup.exe"),
+        (Join-Path $repoRoot "payload\installers\DmsProviderBridgeSetup.exe")
     )
-    if ([string]::IsNullOrWhiteSpace($WfxPluginPath)) {
-        $WfxPluginPath = Resolve-FirstExistingPath -Candidates @(
-            (Join-Path $repoRoot "payload\\tc-wfx\\TcWfxPlugin.wfx64"),
-            (Join-Path $repoRoot "payload\\TcWfxPlugin.wfx64")
-        )
-    }
-    if ([string]::IsNullOrWhiteSpace($PluginConfigPath)) {
-        $PluginConfigPath = Resolve-FirstExistingPath -Candidates @(
-            (Join-Path $repoRoot "payload\\tc-wfx\\config.json"),
-            (Join-Path $repoRoot "payload\\config.json")
-        )
-    }
-    if ([string]::IsNullOrWhiteSpace($BridgeConfigDirPath)) {
-        $BridgeConfigDirPath = Resolve-FirstExistingPath -Candidates @(
-            (Join-Path $repoRoot "payload\\bridge\\config"),
-            (Join-Path $repoRoot "payload\\config")
-        )
-    }
 }
 
-if (-not (Test-Path $BridgeExePath)) {
-    throw "Bridge executable not found: $BridgeExePath"
+if ([string]::IsNullOrWhiteSpace($BrokerSetupPath)) {
+    $BrokerSetupPath = Resolve-FirstExistingPath -Candidates @(
+        (Join-Path $scriptRoot "installers\CredentialBrokerSetup.exe"),
+        (Join-Path $repoRoot "payload\installers\CredentialBrokerSetup.exe")
+    )
+}
+
+if ([string]::IsNullOrWhiteSpace($WfxPluginPath)) {
+    $WfxPluginPath = Resolve-FirstExistingPath -Candidates @(
+        (Join-Path $scriptRoot "tc-wfx\TcWfxPlugin.wfx64"),
+        (Join-Path $repoRoot "payload\tc-wfx\TcWfxPlugin.wfx64"),
+        (Join-Path $repoRoot "payload\TcWfxPlugin.wfx64")
+    )
+}
+
+if ([string]::IsNullOrWhiteSpace($PluginConfigPath)) {
+    $PluginConfigPath = Resolve-FirstExistingPath -Candidates @(
+        (Join-Path $scriptRoot "tc-wfx\config.json"),
+        (Join-Path $repoRoot "payload\tc-wfx\config.json"),
+        (Join-Path $repoRoot "payload\config.json")
+    )
+}
+
+if (-not $SkipBridge) {
+    Invoke-SetupInstaller -Name "DMS Provider Bridge" -Path $BridgeSetupPath
+}
+else {
+    Write-Host "Bridge setup skipped."
+}
+
+if (-not $SkipBroker) {
+    Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath
+}
+else {
+    Write-Host "Credential Broker setup skipped."
 }
 
 if ([string]::IsNullOrWhiteSpace($WfxPluginPath) -or -not (Test-Path $WfxPluginPath)) {
@@ -250,55 +255,18 @@ if ([string]::IsNullOrWhiteSpace($PluginConfigPath) -or -not (Test-Path $PluginC
     throw "Plugin config not found: $PluginConfigPath"
 }
 
-$bridgeExeTargetPath = Join-Path $InstallRoot "dms-provider-bridge.exe"
-$pluginTargetPath = Join-Path $InstallRoot "TcWfxPlugin.wfx64"
-$pluginConfigTargetPath = Join-Path $InstallRoot "config.json"
-$pluginConfigDir = Join-Path $InstallRoot "config"
-$pluginConfigDirTargetPath = Join-Path $pluginConfigDir "config.json"
-$bridgeConfigTargetDir = Join-Path $InstallRoot "config"
-$bridgeLogs = Join-Path $InstallRoot "logs"
-$stdoutLog = Join-Path $bridgeLogs "bridge-stdout.log"
-$stderrLog = Join-Path $bridgeLogs "bridge-stderr.log"
+$wfxRoot = Join-Path $InstallRoot "tc-wfx"
+$wfxConfigRoot = Join-Path $wfxRoot "config"
+$pluginTargetPath = Join-Path $wfxRoot "TcWfxPlugin.wfx64"
+$pluginConfigTargetPath = Join-Path $wfxRoot "config.json"
+$pluginNestedConfigTargetPath = Join-Path $wfxConfigRoot "config.json"
 
-New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
-New-Item -ItemType Directory -Path $bridgeLogs -Force | Out-Null
-New-Item -ItemType Directory -Path $pluginConfigDir -Force | Out-Null
-New-Item -ItemType Directory -Path $bridgeConfigTargetDir -Force | Out-Null
+New-Item -ItemType Directory -Path $wfxRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $wfxConfigRoot -Force | Out-Null
 
-Copy-Item -Path $BridgeExePath -Destination $bridgeExeTargetPath -Force
 Copy-Item -Path $WfxPluginPath -Destination $pluginTargetPath -Force
 Copy-Item -Path $PluginConfigPath -Destination $pluginConfigTargetPath -Force
-Copy-Item -Path $PluginConfigPath -Destination $pluginConfigDirTargetPath -Force
-
-if (-not [string]::IsNullOrWhiteSpace($BridgeConfigDirPath) -and (Test-Path $BridgeConfigDirPath)) {
-    Copy-Item -Path (Join-Path $BridgeConfigDirPath "*.json") -Destination $bridgeConfigTargetDir -Force
-}
-else {
-    Write-Host "Bridge config directory not found, skipping bridge config copy."
-}
-
-& $NssmExePath stop $ServiceName | Out-Null 2>&1
-& $NssmExePath remove $ServiceName confirm | Out-Null 2>&1
-
-& $NssmExePath install $ServiceName $bridgeExeTargetPath
-& $NssmExePath set $ServiceName AppDirectory $InstallRoot
-& $NssmExePath set $ServiceName AppStdout $stdoutLog
-& $NssmExePath set $ServiceName AppStderr $stderrLog
-
-if ($ServiceAccount -eq "LocalSystem") {
-    & $NssmExePath set $ServiceName ObjectName LocalSystem
-}
-else {
-    $resolvedServiceUser = Resolve-ServiceUserName -Mode $ServiceAccount -ExplicitUserName $ServiceUserName
-    if ([string]::IsNullOrWhiteSpace($ServicePassword)) {
-        throw "ServiceAccount=$ServiceAccount requires -ServicePassword."
-    }
-    & $NssmExePath set $ServiceName ObjectName $resolvedServiceUser $ServicePassword
-}
-
-& $NssmExePath set $ServiceName Start SERVICE_AUTO_START
-& $NssmExePath start $ServiceName
-Wait-BridgeHealth -Url $HealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+Copy-Item -Path $PluginConfigPath -Destination $pluginNestedConfigTargetPath -Force
 
 if (-not $DisableTcRegistration) {
     $resolvedIniPath = Resolve-TcWinCmdIniPath -ExplicitPath $WinCmdIniPath
@@ -318,18 +286,22 @@ else {
     Write-Host "Manual registration path: $pluginTargetPath"
 }
 
-Write-Host ""
-Write-Host "Bridge runtime summary"
-Write-Host "Bridge URL:     $HealthUrl"
-Write-Host "Service:        $ServiceName"
-Write-Host "Install root:   $InstallRoot"
-Write-Host "Bridge exe:     $bridgeExeTargetPath"
-Write-Host "WFX plugin:     $pluginTargetPath"
-Write-Host "Plugin config:  $pluginConfigTargetPath"
-Write-Host "Bridge config:  $bridgeConfigTargetDir"
-Write-Host "Service user:   $(if ($ServiceAccount -eq 'LocalSystem') { 'LocalSystem' } elseif ($ServiceAccount -eq 'CurrentUser') { Resolve-ServiceUserName -Mode 'CurrentUser' -ExplicitUserName '' } else { $ServiceUserName })"
-Write-Host "Logs:           $bridgeLogs"
+if (-not $SkipHealthCheck) {
+    if (-not $SkipBridge) {
+        Wait-Health -Name "Bridge" -Url $BridgeHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+    }
+    if (-not $SkipBroker) {
+        Wait-Health -Name "Credential Broker" -Url $BrokerHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+    }
+}
 
-Write-Host "Install finished. Service: $ServiceName"
-Write-Host "Bridge exe: $bridgeExeTargetPath"
-Write-Host "Logs: $bridgeLogs"
+Write-Host ""
+Write-Host "DMS Provider orchestration summary"
+Write-Host "Install root:       $InstallRoot"
+Write-Host "Bridge setup:       $(if ($SkipBridge) { 'skipped' } else { $BridgeSetupPath })"
+Write-Host "Broker setup:       $(if ($SkipBroker) { 'skipped' } else { $BrokerSetupPath })"
+Write-Host "WFX plugin:         $pluginTargetPath"
+Write-Host "WFX config:         $pluginConfigTargetPath"
+Write-Host "Bridge health:      $BridgeHealthUrl"
+Write-Host "Broker health:      $BrokerHealthUrl"
+Write-Host "Install finished."
