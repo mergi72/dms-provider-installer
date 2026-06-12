@@ -8,6 +8,7 @@ tmp/
 out/
 dist/
 artifacts/
+payload/installers/*.exe
 payload/bridge/*.exe
 payload/bridge/config/*.json
 payload/tc-wfx/*.wfx64

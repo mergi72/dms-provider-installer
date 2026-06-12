@@ -1,19 +1,17 @@
 param(
-    [string]$ServiceName = "DmsProviderBridge",
     [string]$InstallRoot = "$env:ProgramFiles\DMS Provider",
-    [string]$BridgeExePath,
+    [string]$BridgeSetupPath,
+    [string]$BrokerSetupPath,
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
-    [string]$NssmExePath,
-    [ValidateSet("LocalSystem", "CurrentUser", "CustomUser")]
-    [string]$ServiceAccount = "LocalSystem",
-    [string]$ServiceUserName,
-    [string]$ServicePassword,
-    [int]$HealthTimeoutSeconds = 30,
-    [string]$HealthUrl = "http://127.0.0.1:8765/health",
+    [int]$HealthTimeoutSeconds = 60,
+    [string]$BridgeHealthUrl = "http://127.0.0.1:8765/health",
+    [string]$BrokerHealthUrl = "http://127.0.0.1:8776/health",
     [string]$WinCmdIniPath,
-    [switch]$DisableTcRegistration,
-    [switch]$Silent
+    [switch]$SkipBridge,
+    [switch]$SkipBroker,
+    [switch]$SkipHealthCheck,
+    [switch]$DisableTcRegistration
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,50 +23,26 @@ if (-not (Test-Path $installScript)) {
     throw "install.ps1 not found: $installScript"
 }
 
-Write-Host "Installing bridge Windows Service..."
 $installParams = @{
-    ServiceName = $ServiceName
     InstallRoot = $InstallRoot
-    NssmExePath = $NssmExePath
-    ServiceAccount = $ServiceAccount
     HealthTimeoutSeconds = $HealthTimeoutSeconds
-    HealthUrl = $HealthUrl
+    BridgeHealthUrl = $BridgeHealthUrl
+    BrokerHealthUrl = $BrokerHealthUrl
 }
 
-if (-not [string]::IsNullOrWhiteSpace($ServiceUserName)) {
-    $installParams.ServiceUserName = $ServiceUserName
+foreach ($name in @("BridgeSetupPath", "BrokerSetupPath", "WfxPluginPath", "PluginConfigPath", "WinCmdIniPath")) {
+    $value = Get-Variable -Name $name -ValueOnly
+    if (-not [string]::IsNullOrWhiteSpace($value)) {
+        $installParams[$name] = $value
+    }
 }
 
-if (-not [string]::IsNullOrWhiteSpace($ServicePassword)) {
-    $installParams.ServicePassword = $ServicePassword
-}
-
-if (-not [string]::IsNullOrWhiteSpace($BridgeExePath)) {
-    $installParams.BridgeExePath = $BridgeExePath
-}
-
-if (-not [string]::IsNullOrWhiteSpace($WfxPluginPath)) {
-    $installParams.WfxPluginPath = $WfxPluginPath
-}
-
-if (-not [string]::IsNullOrWhiteSpace($PluginConfigPath)) {
-    $installParams.PluginConfigPath = $PluginConfigPath
-}
-
-if (-not [string]::IsNullOrWhiteSpace($WinCmdIniPath)) {
-    $installParams.WinCmdIniPath = $WinCmdIniPath
-}
-
-if ($DisableTcRegistration) {
-    $installParams.DisableTcRegistration = $true
-}
+if ($SkipBridge) { $installParams.SkipBridge = $true }
+if ($SkipBroker) { $installParams.SkipBroker = $true }
+if ($SkipHealthCheck) { $installParams.SkipHealthCheck = $true }
+if ($DisableTcRegistration) { $installParams.DisableTcRegistration = $true }
 
 & $installScript @installParams
 if ($LASTEXITCODE -ne 0) {
-    throw "Bridge service installation failed with exit code $LASTEXITCODE"
-}
-
-if (-not $Silent) {
-    Write-Host "Bridge installation and health check finished."
-    Write-Host "Bundle installed: bridge.exe + service + TcWfxPlugin.wfx64 + config.json."
+    throw "DMS Provider orchestration failed with exit code $LASTEXITCODE"
 }

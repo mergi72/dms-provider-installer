@@ -1,7 +1,9 @@
 param(
     [string]$BridgeRepoPath = "..\dms-provider-bridge",
+    [string]$BridgeSetupRelativePath,
+    [string]$CredentialBrokerRepoPath = "..\credential-broker",
+    [string]$BrokerSetupRelativePath,
     [string]$TcPluginRepoPath = "..\tc-wfx-plugin",
-    [string]$NssmExePath,
     [string]$InnoCompilerPath,
     [switch]$SkipCompile
 )
@@ -17,30 +19,8 @@ function Resolve-IsccPath {
 
     $candidates = @(
         "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe",
-        "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
-    )
-
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            return (Resolve-Path $candidate).Path
-        }
-    }
-
-    return $null
-}
-
-function Resolve-NssmPath {
-    param([string]$ExplicitPath)
-
-    if (-not [string]::IsNullOrWhiteSpace($ExplicitPath) -and (Test-Path $ExplicitPath)) {
-        return (Resolve-Path $ExplicitPath).Path
-    }
-
-    $candidates = @(
-        "C:\\tools\\nssm\\win64\\nssm.exe",
-        "C:\\tools\\nssm\\nssm.exe",
-        "$env:ProgramFiles\\nssm\\nssm.exe",
-        "$env:ProgramFiles(x86)\\nssm\\nssm.exe"
+        "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
     )
 
     foreach ($candidate in $candidates) {
@@ -65,30 +45,26 @@ if (-not (Test-Path $issPath)) {
     throw "installer.iss not found: $issPath"
 }
 
-$resolvedNssmPath = Resolve-NssmPath -ExplicitPath $NssmExePath
-if ([string]::IsNullOrWhiteSpace($resolvedNssmPath)) {
-    throw "NSSM executable not found. Provide -NssmExePath."
+$prepareParams = @{
+    BridgeRepoPath = $BridgeRepoPath
+    CredentialBrokerRepoPath = $CredentialBrokerRepoPath
+    TcPluginRepoPath = $TcPluginRepoPath
 }
 
-& $preparePayloadScript -BridgeRepoPath $BridgeRepoPath -TcPluginRepoPath $TcPluginRepoPath
+if (-not [string]::IsNullOrWhiteSpace($BridgeSetupRelativePath)) {
+    $prepareParams.BridgeSetupRelativePath = $BridgeSetupRelativePath
+}
+
+if (-not [string]::IsNullOrWhiteSpace($BrokerSetupRelativePath)) {
+    $prepareParams.BrokerSetupRelativePath = $BrokerSetupRelativePath
+}
+
+& $preparePayloadScript @prepareParams
 if (-not $?) {
     throw "prepare-payload.ps1 failed."
 }
 
-$payloadDir = Join-Path $repoRoot "payload"
-$payloadNssmPath = Join-Path $payloadDir "nssm.exe"
-$resolvedNssmSourcePath = (Resolve-Path $resolvedNssmPath).Path
-$resolvedNssmTargetPath = $null
-if (Test-Path $payloadNssmPath) {
-    $resolvedNssmTargetPath = (Resolve-Path $payloadNssmPath).Path
-}
-
-if ($resolvedNssmSourcePath -ne $resolvedNssmTargetPath) {
-    Copy-Item -Path $resolvedNssmPath -Destination $payloadNssmPath -Force
-}
-
 Write-Host "Payload prepared for Inno Setup build."
-Write-Host "NSSM copied: $payloadNssmPath"
 
 if ($SkipCompile) {
     Write-Host "SkipCompile enabled, not invoking ISCC.exe."
@@ -111,5 +87,5 @@ finally {
     Pop-Location
 }
 
-Write-Host "Inno Setup installer build completed."
+Write-Host "DMS Provider orchestrator installer build completed."
 Write-Host "Output directory: $(Join-Path $repoRoot 'artifacts\installer')"

@@ -1,8 +1,10 @@
-Place release payload files here before running installer scripts.
+Payload staging directory for the DMS Provider orchestrator installer.
 
-Required for Phase 1-3:
-- dms-provider-bridge.exe
+Generated layout:
 
-Optional for later phases:
-- TcWfxPlugin.wfx64
-- plugin.json
+- installers/DmsProviderBridgeSetup.exe
+- installers/CredentialBrokerSetup.exe
+- tc-wfx/TcWfxPlugin.wfx64
+- tc-wfx/config.json
+
+Use scripts/prepare-payload.ps1 to refresh this directory from sibling repos.

@@ -1,8 +1,6 @@
 param(
-    [string]$ServiceName = "DmsProviderBridge",
-    [string]$InstallRoot = "$env:ProgramFiles\\DMS Provider",
-    [string]$NssmExePath,
-    [switch]$KeepBridgeFiles
+    [string]$InstallRoot = "$env:ProgramFiles\DMS Provider",
+    [switch]$KeepWfxFiles
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,15 +15,12 @@ if (-not (Test-IsAdministrator)) {
     throw "Uninstall requires elevated PowerShell (Run as Administrator)."
 }
 
-if ([string]::IsNullOrWhiteSpace($NssmExePath) -or -not (Test-Path $NssmExePath)) {
-    throw "NSSM executable not found. Provide -NssmExePath."
+$wfxRoot = Join-Path $InstallRoot "tc-wfx"
+
+if (-not $KeepWfxFiles -and (Test-Path $wfxRoot)) {
+    Remove-Item -Path $wfxRoot -Recurse -Force
 }
 
-& $NssmExePath stop $ServiceName | Out-Null 2>&1
-& $NssmExePath remove $ServiceName confirm | Out-Null 2>&1
-
-if (-not $KeepBridgeFiles -and (Test-Path $InstallRoot)) {
-    Remove-Item -Path $InstallRoot -Recurse -Force
-}
-
-Write-Host "Uninstall finished. Service removed: $ServiceName"
+Write-Host "DMS Provider orchestrator uninstall finished."
+Write-Host "WFX files removed: $(-not $KeepWfxFiles)"
+Write-Host "Bridge and Credential Broker are owned by their own installers."

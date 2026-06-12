@@ -1,7 +1,8 @@
 param(
     [string]$BridgeRepoPath = "..\dms-provider-bridge",
-    [string]$BridgeExeRelativePath = "dist\dms-provider-bridge.exe",
-    [string]$BridgeConfigRelativeDir = "config",
+    [string]$BridgeSetupRelativePath,
+    [string]$CredentialBrokerRepoPath = "..\credential-broker",
+    [string]$BrokerSetupRelativePath,
     [string]$TcPluginRepoPath = "..\tc-wfx-plugin",
     [string]$TcPluginRelativePath = "artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.wfx64",
     [string]$TcPluginDllRelativePath = "artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll",
@@ -11,42 +12,75 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Resolve-RepoPath {
+    param(
+        [string]$Path,
+        [string]$InstallerRoot
+    )
+
+    if (-not [System.IO.Path]::IsPathRooted($Path)) {
+        $Path = Join-Path $InstallerRoot $Path
+    }
+
+    return (Resolve-Path $Path).Path
+}
+
+function Resolve-LatestInstaller {
+    param(
+        [string]$RepoPath,
+        [string]$RelativePath,
+        [string]$Pattern,
+        [string]$Name
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($RelativePath)) {
+        $candidate = Join-Path $RepoPath $RelativePath
+        if (-not (Test-Path $candidate)) {
+            throw "$Name setup not found: $candidate"
+        }
+        return (Resolve-Path $candidate).Path
+    }
+
+    $installerDir = Join-Path $RepoPath "artifacts\installer"
+    if (-not (Test-Path $installerDir)) {
+        throw "$Name installer directory not found: $installerDir"
+    }
+
+    $latest = Get-ChildItem -Path $installerDir -Filter $Pattern -File |
+        Sort-Object LastWriteTime, Name -Descending |
+        Select-Object -First 1
+
+    if ($null -eq $latest) {
+        throw "$Name setup not found in $installerDir with pattern $Pattern"
+    }
+
+    return $latest.FullName
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $installerRoot = Resolve-Path (Join-Path $scriptRoot "..")
 
-if (-not [System.IO.Path]::IsPathRooted($BridgeRepoPath)) {
-    $BridgeRepoPath = Join-Path $installerRoot $BridgeRepoPath
-}
-$BridgeRepoPath = (Resolve-Path $BridgeRepoPath).Path
-
-if (-not [System.IO.Path]::IsPathRooted($TcPluginRepoPath)) {
-    $TcPluginRepoPath = Join-Path $installerRoot $TcPluginRepoPath
-}
-$TcPluginRepoPath = (Resolve-Path $TcPluginRepoPath).Path
+$BridgeRepoPath = Resolve-RepoPath -Path $BridgeRepoPath -InstallerRoot $installerRoot
+$CredentialBrokerRepoPath = Resolve-RepoPath -Path $CredentialBrokerRepoPath -InstallerRoot $installerRoot
+$TcPluginRepoPath = Resolve-RepoPath -Path $TcPluginRepoPath -InstallerRoot $installerRoot
 
 if (-not [System.IO.Path]::IsPathRooted($PayloadDir)) {
     $PayloadDir = Join-Path $installerRoot $PayloadDir
 }
 
-$sourceExe = Join-Path $BridgeRepoPath $BridgeExeRelativePath
-$sourceBridgeConfigDir = Join-Path $BridgeRepoPath $BridgeConfigRelativeDir
-$bridgePayloadDir = Join-Path $PayloadDir "bridge"
+$installersPayloadDir = Join-Path $PayloadDir "installers"
 $tcPayloadDir = Join-Path $PayloadDir "tc-wfx"
-$targetExe = Join-Path $bridgePayloadDir "dms-provider-bridge.exe"
+$targetBridgeSetup = Join-Path $installersPayloadDir "DmsProviderBridgeSetup.exe"
+$targetBrokerSetup = Join-Path $installersPayloadDir "CredentialBrokerSetup.exe"
+$targetPluginWfx = Join-Path $tcPayloadDir "TcWfxPlugin.wfx64"
+$targetPluginConfig = Join-Path $tcPayloadDir "config.json"
+
+$sourceBridgeSetup = Resolve-LatestInstaller -RepoPath $BridgeRepoPath -RelativePath $BridgeSetupRelativePath -Pattern "DmsProviderBridgeSetup-*.exe" -Name "Bridge"
+$sourceBrokerSetup = Resolve-LatestInstaller -RepoPath $CredentialBrokerRepoPath -RelativePath $BrokerSetupRelativePath -Pattern "CredentialBrokerSetup-*.exe" -Name "Credential Broker"
+
 $sourcePluginWfx = Join-Path $TcPluginRepoPath $TcPluginRelativePath
 $sourcePluginDll = Join-Path $TcPluginRepoPath $TcPluginDllRelativePath
 $sourcePluginConfig = Join-Path $TcPluginRepoPath $TcPluginConfigRelativePath
-$targetPluginWfx = Join-Path $tcPayloadDir "TcWfxPlugin.wfx64"
-$targetPluginConfig = Join-Path $tcPayloadDir "config.json"
-$targetBridgeConfigDir = Join-Path $bridgePayloadDir "config"
-
-if (-not (Test-Path $sourceExe)) {
-    throw "Bridge executable not found: $sourceExe"
-}
-
-if (-not (Test-Path $sourceBridgeConfigDir)) {
-    throw "Bridge config directory not found: $sourceBridgeConfigDir"
-}
 
 $pluginSourceToCopy = $null
 if (Test-Path $sourcePluginWfx) {
@@ -63,26 +97,21 @@ if (-not (Test-Path $sourcePluginConfig)) {
     throw "TC plugin config not found: $sourcePluginConfig"
 }
 
-New-Item -ItemType Directory -Path $bridgePayloadDir -Force | Out-Null
+New-Item -ItemType Directory -Path $installersPayloadDir -Force | Out-Null
 New-Item -ItemType Directory -Path $tcPayloadDir -Force | Out-Null
-New-Item -ItemType Directory -Path $targetBridgeConfigDir -Force | Out-Null
-Copy-Item -Path $sourceExe -Destination $targetExe -Force
+
+Copy-Item -Path $sourceBridgeSetup -Destination $targetBridgeSetup -Force
+Copy-Item -Path $sourceBrokerSetup -Destination $targetBrokerSetup -Force
 Copy-Item -Path $pluginSourceToCopy -Destination $targetPluginWfx -Force
 Copy-Item -Path $sourcePluginConfig -Destination $targetPluginConfig -Force
-Copy-Item -Path (Join-Path $sourceBridgeConfigDir "*.json") -Destination $targetBridgeConfigDir -Force
 
-$sourceInfo = Get-Item $sourceExe
-$targetInfo = Get-Item $targetExe
-$pluginTargetInfo = Get-Item $targetPluginWfx
-$configTargetInfo = Get-Item $targetPluginConfig
-$bridgeConfigFiles = Get-ChildItem -Path $targetBridgeConfigDir -Filter "*.json" -File | Sort-Object Name
+$bridgeInfo = Get-Item $targetBridgeSetup
+$brokerInfo = Get-Item $targetBrokerSetup
+$pluginInfo = Get-Item $targetPluginWfx
+$configInfo = Get-Item $targetPluginConfig
 
 Write-Host "Payload prepared."
-Write-Host "Source: $($sourceInfo.FullName)"
-Write-Host "Target: $($targetInfo.FullName)"
-Write-Host "Size:   $($targetInfo.Length) bytes"
-Write-Host "Time:   $($targetInfo.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'))"
-Write-Host "Plugin: $($pluginTargetInfo.FullName)"
-Write-Host "Config: $($configTargetInfo.FullName)"
-Write-Host "Bridge config dir: $targetBridgeConfigDir"
-Write-Host "Bridge config files: $($bridgeConfigFiles.Name -join ', ')"
+Write-Host "Bridge setup: $($bridgeInfo.FullName) ($($bridgeInfo.Length) bytes)"
+Write-Host "Broker setup: $($brokerInfo.FullName) ($($brokerInfo.Length) bytes)"
+Write-Host "Plugin:       $($pluginInfo.FullName) ($($pluginInfo.Length) bytes)"
+Write-Host "Config:       $($configInfo.FullName)"

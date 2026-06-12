@@ -1,197 +1,112 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.2.2--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.3.0--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
 Current development branch: `develop`  
 Stable release branch: `main`
 
-Standalone installer project for deploying dms-provider-bridge as a Windows Service and installing the Total Commander WFX plugin.
+Orchestrator installer for the DMS Provider desktop stack.
 
-Installs:
+It bundles and runs the dedicated installers for:
+
 - DMS Provider Bridge
-- Windows Service (NSSM)
-- Total Commander WFX plugin (`TcWfxPlugin.wfx64`)
-- Plugin config (`config.json`)
+- Credential Broker
+- Total Commander WFX plugin
 
-Supported:
-- Windows 10/11
-- Total Commander 64-bit
-
-Related projects:
-- dms-provider-bridge
-- tc-wfx-plugin
-
-Disclaimer:
-- This installer currently supports the Alfresco provider.
-- eDoCat-specific provider support is still under development.
-
-Goals:
-- Keep the bridge repository clean (application/API only).
-- Keep the tc-wfx-plugin repository clean (plugin code only).
-- Provide one place for deployment steps (service install, health check, uninstall).
+The bridge installer owns bridge executable deployment, service/task setup, NSSM usage, health checks, and machine/user config locations. The credential broker installer owns broker deployment, per-user scheduled task setup, and broker config. This project owns only orchestration and Total Commander WFX installation/registration.
 
 ## What This Project Does
 
-- Installs prebuilt bridge executable.
-- Installs WFX plugin into `%ProgramFiles%\DMS Provider\TcWfxPlugin.wfx64`.
-- Installs plugin config into `%ProgramFiles%\DMS Provider\config.json`.
-- Installs/updates Windows Service via NSSM.
-- Supports uninstall.
-- Verifies bridge health endpoint after service start.
-- If Total Commander config is found, registers plugin automatically in `wincmd.ini` under `[FileSystemPlugins64]`.
-- Creates `wincmd.ini` backup before modification.
-- Provides manual plugin path when Total Commander config is not found.
-- Provides a wrapper flow: bridge service install -> health check -> plugin install/registration.
-- Prints runtime summary after health check (URL/service/install paths).
+- Bundles `DmsProviderBridgeSetup.exe`.
+- Bundles `CredentialBrokerSetup.exe`.
+- Installs `TcWfxPlugin.wfx64` into `%ProgramFiles%\DMS Provider\tc-wfx`.
+- Installs WFX `config.json` next to the plugin and under `tc-wfx\config`.
+- Runs bridge and broker setup installers.
+- Optionally verifies bridge and broker health endpoints.
+- Registers the WFX plugin in Total Commander `wincmd.ini` under `[FileSystemPlugins64]`.
+- Creates a `wincmd.ini` backup before modification.
 
-## Prerequisites
+## What This Project Does Not Own
 
-- PowerShell running as Administrator.
-- NSSM binary available locally (for example `tools/nssm/nssm.exe`).
-- Prebuilt `dms-provider-bridge.exe` available (for example from bridge repo `dist/`).
-- Built WFX plugin and config available from `tc-wfx-plugin` repo.
+- Bridge config files.
+- `DMS_PROVIDER_MACHINE_CONFIG_DIR`.
+- `DMS_PROVIDER_USER_CONFIG_DIR`.
+- NSSM service setup.
+- Credential Broker config files.
+- Credential Broker scheduled task setup.
 
-## Quick Commands
+Those are intentionally handled by the dedicated component installers.
 
-Build single installer EXE (Inno Setup):
+## Build
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build-inno-installer.ps1 \
-  -BridgeRepoPath C:\dev\dms-provider-bridge \
-  -TcPluginRepoPath C:\dev\tc-wfx-plugin
-```
-
-Build script does:
-
-- prepares payload (bridge exe + WFX + config)
-- copies `nssm.exe` into payload (from `-NssmExePath` or common local paths)
-- compiles [installer.iss](installer.iss) into one installer EXE
-
-Installer output:
-
-- `artifacts\installer\DmsProviderInstaller-v0.2.2-alpha.exe`
-
-Prepare payload from bridge build output:
+Build the orchestrator installer:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\prepare-payload.ps1 \
-  -BridgeRepoPath C:\dev\dms-provider-bridge \
-  -TcPluginRepoPath C:\dev\tc-wfx-plugin
+powershell -ExecutionPolicy Bypass -File .\scripts\build-inno-installer.ps1 `
+  -BridgeRepoPath ..\dms-provider-bridge `
+  -CredentialBrokerRepoPath ..\credential-broker `
+  -TcPluginRepoPath ..\tc-wfx-plugin
 ```
 
-This copies all required files into payload:
+The build script:
 
-- `payload\bridge\dms-provider-bridge.exe`
-- `payload\bridge\config\*.json`
+- picks the latest `DmsProviderBridgeSetup-*.exe` from the bridge repo unless `-BridgeSetupRelativePath` is provided;
+- picks the latest `CredentialBrokerSetup-*.exe` from the broker repo unless `-BrokerSetupRelativePath` is provided;
+- copies the WFX plugin and config from `tc-wfx-plugin`;
+- compiles [installer.iss](installer.iss) with Inno Setup.
+
+Output:
+
+- `artifacts\installer\DmsProviderInstaller-v0.3.0-alpha.exe`
+
+Prepare payload only:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\prepare-payload.ps1 `
+  -BridgeRepoPath ..\dms-provider-bridge `
+  -CredentialBrokerRepoPath ..\credential-broker `
+  -TcPluginRepoPath ..\tc-wfx-plugin
+```
+
+Payload layout:
+
+- `payload\installers\DmsProviderBridgeSetup.exe`
+- `payload\installers\CredentialBrokerSetup.exe`
 - `payload\tc-wfx\TcWfxPlugin.wfx64`
 - `payload\tc-wfx\config.json`
 
-Recommended wrapper (interactive flow):
+## Manual Install
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
-  -BridgeExePath C:\dev\dms-provider-bridge\dist\dms-provider-bridge.exe \
-  -NssmExePath C:\tools\nssm\win64\nssm.exe
+powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1
 ```
 
-Wrapper behavior:
-
-- Installs bridge as Windows Service (via `install.ps1`).
-- Verifies `http://127.0.0.1:8765/health`.
-- Installs plugin bundle into `%ProgramFiles%\DMS Provider`.
-- Tries to register WFX plugin automatically in Total Commander config.
-- Creates backup of `wincmd.ini` before editing.
-- If Total Commander config is not found, prints plugin path for manual registration.
-
-Default payload behavior:
-
-- If `-BridgeExePath` is not provided, installer looks for `payload/bridge/dms-provider-bridge.exe` (fallback: `payload/dms-provider-bridge.exe`).
-- If `-WfxPluginPath` is not provided, installer looks for `payload/tc-wfx/TcWfxPlugin.wfx64` (fallback: `payload/TcWfxPlugin.wfx64`).
-- If `-PluginConfigPath` is not provided, installer looks for `payload/tc-wfx/config.json` (fallback: `payload/config.json`).
-- Bridge config directory defaults to `payload/bridge/config` (fallback: `payload/config`) and copied into `%ProgramFiles%\DMS Provider\config`.
-
-Important:
-
-- Current installer phase installs bridge + service + WFX plugin + config.
-- Automatic TC registration can be disabled with `-DisableTcRegistration`.
-
-Silent mode (no prompts, installs plugin automatically when TC is detected):
+Useful options:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
-  -BridgeExePath C:\dev\dms-provider-bridge\dist\dms-provider-bridge.exe \
-  -NssmExePath C:\tools\nssm\win64\nssm.exe \
-  -Silent
-```
-
-Install:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 \
-  -BridgeExePath C:\dev\dms-provider-bridge\dist\dms-provider-bridge.exe \
-  -NssmExePath C:\tools\nssm\win64\nssm.exe
-```
-
-Optional install arguments:
-
-```powershell
--HealthTimeoutSeconds 30
--HealthUrl http://127.0.0.1:8765/health
+-BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.4.16.exe
+-BrokerSetupPath C:\path\CredentialBrokerSetup-v0.2.9.exe
+-WfxPluginPath C:\path\TcWfxPlugin.wfx64
+-PluginConfigPath C:\path\config.json
 -WinCmdIniPath C:\Users\<user>\AppData\Roaming\GHISLER\wincmd.ini
+-SkipBridge
+-SkipBroker
+-SkipHealthCheck
 -DisableTcRegistration
--ServiceAccount LocalSystem|CurrentUser|CustomUser
--ServiceUserName DOMAIN\user
--ServicePassword <password>
 ```
 
-Service account notes:
+Default health endpoints:
 
-- `LocalSystem` (default): best for machine-level deployment, but may not see user-only Credential Manager entries.
-- `CurrentUser`: runs service under the installing user account (requires `-ServicePassword`).
-- `CustomUser`: runs service under explicit account (`-ServiceUserName` + `-ServicePassword`).
+- Bridge: `http://127.0.0.1:8765/health`
+- Credential Broker: `http://127.0.0.1:8776/health`
 
-Example (CurrentUser):
+## Uninstall
+
+The orchestrator uninstall removes only its WFX files. Bridge and Credential Broker are uninstalled through their own entries in Windows Apps & Features.
+
+Manual WFX cleanup:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
-  -NssmExePath C:\tools\nssm\win64\nssm.exe \
-  -ServiceAccount CurrentUser \
-  -ServicePassword "<user-password>"
+powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1
 ```
-
-Example (CustomUser):
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1 \
-  -NssmExePath C:\tools\nssm\win64\nssm.exe \
-  -ServiceAccount CustomUser \
-  -ServiceUserName "DOMAIN\\svc-dms" \
-  -ServicePassword "<service-password>"
-```
-
-Uninstall:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1 \
-  -NssmExePath C:\tools\nssm\win64\nssm.exe
-```
-
-Manual compile (if needed):
-
-```powershell
-"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" .\installer.iss
-```
-
-## Troubleshooting
-
-- Service does not start:
-  - check service state and NSSM configuration
-  - check installer runtime logs under `%ProgramFiles%\DMS Provider\logs`
-- Health check fails (`http://127.0.0.1:8765/health`):
-  - verify port `8765` is not blocked or used by another process
-  - verify service is running (`DmsProviderBridge`)
-- Plugin not visible in Total Commander:
-  - verify `%ProgramFiles%\DMS Provider\TcWfxPlugin.wfx64` exists
-  - verify installer output for detected `wincmd.ini` path and backup creation
-  - if auto-registration was skipped, add plugin manually in Total Commander (WFX -> Add)
