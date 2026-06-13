@@ -325,8 +325,6 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
 
 if (-not $SkipBroker) {
     Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath
-    Start-BrokerTask -TaskName $BrokerTaskName -InstallRoot $BrokerInstallRoot
-    Wait-DiagnosticPause -Reason "Credential Broker setup/start step finished. Check the console above before continuing." -Force:$PauseOnBrokerStep
 }
 else {
     Write-Host "Credential Broker setup skipped."
@@ -373,6 +371,11 @@ if (-not $DisableTcRegistration) {
 else {
     Write-Host "Automatic Total Commander registration disabled."
     Write-Host "Manual registration path: $pluginTargetPath"
+}
+
+if (-not $SkipBroker) {
+    Start-BrokerTask -TaskName $BrokerTaskName -InstallRoot $BrokerInstallRoot
+    Wait-DiagnosticPause -Reason "Credential Broker start step finished after WFX installation. Check the console above before continuing." -Force:$PauseOnBrokerStep
 }
 
 if (-not $SkipBridge) {

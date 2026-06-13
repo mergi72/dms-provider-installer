@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.11-alpha] - 2026-06-13
+
+### Changed
+
+- Starts Credential Broker only after the Total Commander WFX plugin has been installed and registered.
+- Keeps broker setup first and DMS Provider Bridge setup last.
+- Kept DMS Provider Bridge payload on v0.4.22.
+- Kept Credential Broker payload on v0.2.11.
+- Kept tc-wfx-plugin payload on v0.2.7.
+
 ## [v0.3.10-alpha] - 2026-06-13
 
 ### Changed
