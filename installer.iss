@@ -1,7 +1,7 @@
 [Setup]
 AppId={{4B5D3C16-2A06-4A1A-AE22-08FBA70FE11D}
 AppName=DMS Provider Installer
-AppVersion=0.3.4-alpha
+AppVersion=0.3.5-alpha
 AppPublisher=mergi72
 DefaultDirName={autopf}\DMS Provider
 DefaultGroupName=DMS Provider
@@ -10,7 +10,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=artifacts\installer
-OutputBaseFilename=DmsProviderInstaller-v0.3.4-alpha
+OutputBaseFilename=DmsProviderInstaller-v0.3.5-alpha
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
