@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Refreshes the v0.2.12 broker payload with ScheduledTasks-compatible `Limited` run level.
 - Refreshes the v0.2.12 broker payload to avoid version-specific `New-ScheduledTaskSettingsSet` parameters.
 - Refreshes the v0.2.12 broker payload to use `schtasks.exe` instead of PowerShell ScheduledTasks cmdlets.
+- Refreshes the v0.2.12 broker payload so missing-task cleanup does not block task creation.
 - Kept DMS Provider Bridge payload on v0.4.22.
 - Kept tc-wfx-plugin payload on v0.2.7.
 
