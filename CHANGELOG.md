@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.7-alpha] - 2026-06-13
+
+### Changed
+
+- Refreshed DMS Provider Bridge payload to v0.4.22.
+- Refreshed Credential Broker payload to v0.2.10.
+- Kept tc-wfx-plugin payload on v0.2.7.
+
 ## [v0.3.6-alpha] - 2026-06-13
 
 ### Changed
