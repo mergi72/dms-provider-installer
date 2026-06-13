@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.10-alpha] - 2026-06-13
+
+### Changed
+
+- Waits briefly for the Credential Broker scheduled task to become visible after broker setup.
+- Falls back to starting the broker launcher directly when the scheduled task is not visible after setup.
+- Keeps the main installer diagnostic pauses from v0.3.9-alpha.
+- Kept DMS Provider Bridge payload on v0.4.22.
+- Kept Credential Broker payload on v0.2.11.
+- Kept tc-wfx-plugin payload on v0.2.7.
+
 ## [v0.3.9-alpha] - 2026-06-13
 
 ### Changed
