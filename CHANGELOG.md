@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Refreshed Credential Broker payload to v0.2.12.
 - Prints Credential Broker installer/stdout/stderr log tails when broker health check fails.
 - Starts Credential Broker through its local launcher after WFX installation instead of depending on scheduled task lookup.
+- Refreshes the v0.2.12 broker payload with ScheduledTasks-compatible `Interactive` logon type.
 - Kept DMS Provider Bridge payload on v0.4.22.
 - Kept tc-wfx-plugin payload on v0.2.7.
 
