@@ -1,9 +1,10 @@
 param(
-    [string]$InstallRoot = "$env:ProgramFiles\DMS Provider",
+    [string]$InstallRoot = "$env:LOCALAPPDATA\Programs\DMS Provider",
     [string]$BridgeSetupPath,
     [string]$BrokerSetupPath,
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
+    [string]$PluginLocalizePath,
     [int]$HealthTimeoutSeconds = 60,
     [string]$BridgeHealthUrl = "http://127.0.0.1:8765/health",
     [string]$BrokerHealthUrl = "http://127.0.0.1:8776/health",
@@ -30,7 +31,7 @@ $installParams = @{
     BrokerHealthUrl = $BrokerHealthUrl
 }
 
-foreach ($name in @("BridgeSetupPath", "BrokerSetupPath", "WfxPluginPath", "PluginConfigPath", "WinCmdIniPath")) {
+foreach ($name in @("BridgeSetupPath", "BrokerSetupPath", "WfxPluginPath", "PluginConfigPath", "PluginLocalizePath", "WinCmdIniPath")) {
     $value = Get-Variable -Name $name -ValueOnly
     if (-not [string]::IsNullOrWhiteSpace($value)) {
         $installParams[$name] = $value

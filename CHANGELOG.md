@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.6-alpha] - 2026-06-13
+
+### Changed
+
+- Changed orchestrator install flow to user context first: Credential Broker, WFX plugin install/registration, then DMS Provider Bridge setup last.
+- Removed the orchestrator-level administrator requirement so the bridge setup owns its own elevation/admin flow.
+- Changed the default orchestrator install root to the current user's local app data programs directory.
+- Made WFX file copy idempotent when the payload file is already in the target location.
+- Updated the install wrapper to pass `PluginLocalizePath`.
+
 ## [v0.3.5-alpha] - 2026-06-13
 
 ### Changed

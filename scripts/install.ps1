@@ -1,5 +1,5 @@
 param(
-    [string]$InstallRoot = "$env:ProgramFiles\DMS Provider",
+    [string]$InstallRoot = "$env:LOCALAPPDATA\Programs\DMS Provider",
     [string]$BridgeSetupPath,
     [string]$BrokerSetupPath,
     [string]$WfxPluginPath,
@@ -16,12 +16,6 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
-function Test-IsAdministrator {
-    $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = [Security.Principal.WindowsPrincipal]::new($currentIdentity)
-    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
 
 function Resolve-FirstExistingPath {
     param([string[]]$Candidates)
@@ -93,6 +87,26 @@ function Backup-File {
     $backupPath = "$Path.$stamp.bak"
     Copy-Item -Path $Path -Destination $backupPath -Force
     return $backupPath
+}
+
+function Copy-FileIfNeeded {
+    param(
+        [string]$Source,
+        [string]$Destination
+    )
+
+    $resolvedSource = (Resolve-Path $Source).Path
+    $resolvedDestination = $null
+    if (Test-Path $Destination) {
+        $resolvedDestination = (Resolve-Path $Destination).Path
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($resolvedDestination) -and $resolvedSource -ieq $resolvedDestination) {
+        Write-Host "File already in target location: $Destination"
+        return
+    }
+
+    Copy-Item -Path $resolvedSource -Destination $Destination -Force
 }
 
 function Register-WfxPlugin {
@@ -197,10 +211,6 @@ function Wait-Health {
     throw "$Name health check did not pass within $TimeoutSeconds s: $Url"
 }
 
-if (-not (Test-IsAdministrator)) {
-    throw "Install requires elevated PowerShell (Run as Administrator)."
-}
-
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot
 
@@ -243,13 +253,6 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
     )
 }
 
-if (-not $SkipBridge) {
-    Invoke-SetupInstaller -Name "DMS Provider Bridge" -Path $BridgeSetupPath
-}
-else {
-    Write-Host "Bridge setup skipped."
-}
-
 if (-not $SkipBroker) {
     Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath
 }
@@ -275,11 +278,11 @@ $pluginLocalizeTargetPath = Join-Path $wfxConfigRoot "localize.json"
 New-Item -ItemType Directory -Path $wfxRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $wfxConfigRoot -Force | Out-Null
 
-Copy-Item -Path $WfxPluginPath -Destination $pluginTargetPath -Force
-Copy-Item -Path $PluginConfigPath -Destination $pluginConfigTargetPath -Force
-Copy-Item -Path $PluginConfigPath -Destination $pluginNestedConfigTargetPath -Force
+Copy-FileIfNeeded -Source $WfxPluginPath -Destination $pluginTargetPath
+Copy-FileIfNeeded -Source $PluginConfigPath -Destination $pluginConfigTargetPath
+Copy-FileIfNeeded -Source $PluginConfigPath -Destination $pluginNestedConfigTargetPath
 if (-not [string]::IsNullOrWhiteSpace($PluginLocalizePath) -and (Test-Path $PluginLocalizePath)) {
-    Copy-Item -Path $PluginLocalizePath -Destination $pluginLocalizeTargetPath -Force
+    Copy-FileIfNeeded -Source $PluginLocalizePath -Destination $pluginLocalizeTargetPath
 }
 
 if (-not $DisableTcRegistration) {
@@ -300,12 +303,19 @@ else {
     Write-Host "Manual registration path: $pluginTargetPath"
 }
 
+if (-not $SkipBridge) {
+    Invoke-SetupInstaller -Name "DMS Provider Bridge" -Path $BridgeSetupPath
+}
+else {
+    Write-Host "Bridge setup skipped."
+}
+
 if (-not $SkipHealthCheck) {
-    if (-not $SkipBridge) {
-        Wait-Health -Name "Bridge" -Url $BridgeHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
-    }
     if (-not $SkipBroker) {
         Wait-Health -Name "Credential Broker" -Url $BrokerHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+    }
+    if (-not $SkipBridge) {
+        Wait-Health -Name "Bridge" -Url $BridgeHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
     }
 }
 
