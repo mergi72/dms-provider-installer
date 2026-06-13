@@ -7,6 +7,7 @@ param(
     [string]$TcPluginRelativePath = "artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.wfx64",
     [string]$TcPluginDllRelativePath = "artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll",
     [string]$TcPluginConfigRelativePath = "config\config.json",
+    [string]$TcPluginLocalizeRelativePath = "config\localize.json",
     [string]$PayloadDir = "payload"
 )
 
@@ -57,6 +58,39 @@ function Resolve-LatestInstaller {
     return $latest.FullName
 }
 
+function Resolve-LatestWfxPlugin {
+    param(
+        [string]$RepoPath,
+        [string]$RelativePath,
+        [string]$DllRelativePath
+    )
+
+    $wfxCandidate = Join-Path $RepoPath $RelativePath
+    if (Test-Path $wfxCandidate) {
+        return (Resolve-Path $wfxCandidate).Path
+    }
+
+    $releaseDir = Join-Path $RepoPath "artifacts\release"
+    if (Test-Path $releaseDir) {
+        $latest = Get-ChildItem -Path $releaseDir -Filter "TcWfxPlugin-*-win-x64" -Directory |
+            Sort-Object LastWriteTime, Name -Descending |
+            ForEach-Object { Join-Path $_.FullName "TcWfxPlugin.wfx64" } |
+            Where-Object { Test-Path $_ } |
+            Select-Object -First 1
+
+        if (-not [string]::IsNullOrWhiteSpace($latest)) {
+            return (Resolve-Path $latest).Path
+        }
+    }
+
+    $dllCandidate = Join-Path $RepoPath $DllRelativePath
+    if (Test-Path $dllCandidate) {
+        return (Resolve-Path $dllCandidate).Path
+    }
+
+    throw "TC plugin binary not found. Checked: $wfxCandidate, $dllCandidate, and $releaseDir"
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $installerRoot = Resolve-Path (Join-Path $scriptRoot "..")
 
@@ -74,24 +108,15 @@ $targetBridgeSetup = Join-Path $installersPayloadDir "DmsProviderBridgeSetup.exe
 $targetBrokerSetup = Join-Path $installersPayloadDir "CredentialBrokerSetup.exe"
 $targetPluginWfx = Join-Path $tcPayloadDir "TcWfxPlugin.wfx64"
 $targetPluginConfig = Join-Path $tcPayloadDir "config.json"
+$targetPluginLocalize = Join-Path $tcPayloadDir "localize.json"
 
 $sourceBridgeSetup = Resolve-LatestInstaller -RepoPath $BridgeRepoPath -RelativePath $BridgeSetupRelativePath -Pattern "DmsProviderBridgeSetup-*.exe" -Name "Bridge"
 $sourceBrokerSetup = Resolve-LatestInstaller -RepoPath $CredentialBrokerRepoPath -RelativePath $BrokerSetupRelativePath -Pattern "CredentialBrokerSetup-*.exe" -Name "Credential Broker"
 
-$sourcePluginWfx = Join-Path $TcPluginRepoPath $TcPluginRelativePath
-$sourcePluginDll = Join-Path $TcPluginRepoPath $TcPluginDllRelativePath
 $sourcePluginConfig = Join-Path $TcPluginRepoPath $TcPluginConfigRelativePath
+$sourcePluginLocalize = Join-Path $TcPluginRepoPath $TcPluginLocalizeRelativePath
 
-$pluginSourceToCopy = $null
-if (Test-Path $sourcePluginWfx) {
-    $pluginSourceToCopy = $sourcePluginWfx
-}
-elseif (Test-Path $sourcePluginDll) {
-    $pluginSourceToCopy = $sourcePluginDll
-}
-else {
-    throw "TC plugin binary not found. Checked: $sourcePluginWfx and $sourcePluginDll"
-}
+$pluginSourceToCopy = Resolve-LatestWfxPlugin -RepoPath $TcPluginRepoPath -RelativePath $TcPluginRelativePath -DllRelativePath $TcPluginDllRelativePath
 
 if (-not (Test-Path $sourcePluginConfig)) {
     throw "TC plugin config not found: $sourcePluginConfig"
@@ -104,14 +129,21 @@ Copy-Item -Path $sourceBridgeSetup -Destination $targetBridgeSetup -Force
 Copy-Item -Path $sourceBrokerSetup -Destination $targetBrokerSetup -Force
 Copy-Item -Path $pluginSourceToCopy -Destination $targetPluginWfx -Force
 Copy-Item -Path $sourcePluginConfig -Destination $targetPluginConfig -Force
+if (Test-Path $sourcePluginLocalize) {
+    Copy-Item -Path $sourcePluginLocalize -Destination $targetPluginLocalize -Force
+}
 
 $bridgeInfo = Get-Item $targetBridgeSetup
 $brokerInfo = Get-Item $targetBrokerSetup
 $pluginInfo = Get-Item $targetPluginWfx
 $configInfo = Get-Item $targetPluginConfig
+$localizeInfo = if (Test-Path $targetPluginLocalize) { Get-Item $targetPluginLocalize } else { $null }
 
 Write-Host "Payload prepared."
 Write-Host "Bridge setup: $($bridgeInfo.FullName) ($($bridgeInfo.Length) bytes)"
 Write-Host "Broker setup: $($brokerInfo.FullName) ($($brokerInfo.Length) bytes)"
 Write-Host "Plugin:       $($pluginInfo.FullName) ($($pluginInfo.Length) bytes)"
 Write-Host "Config:       $($configInfo.FullName)"
+if ($null -ne $localizeInfo) {
+    Write-Host "Localize:     $($localizeInfo.FullName)"
+}

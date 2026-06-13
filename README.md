@@ -1,7 +1,7 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.3.3--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.3.4--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -22,6 +22,7 @@ The bridge installer owns bridge executable deployment, service/task setup, NSSM
 - Bundles `CredentialBrokerSetup.exe`.
 - Installs `TcWfxPlugin.wfx64` into `%ProgramFiles%\DMS Provider\tc-wfx`.
 - Installs WFX `config.json` next to the plugin and under `tc-wfx\config`.
+- Installs WFX localization from `localize.json` under `tc-wfx\config`.
 - Runs bridge and broker setup installers.
 - Optionally verifies bridge and broker health endpoints.
 - Registers the WFX plugin in Total Commander `wincmd.ini` under `[FileSystemPlugins64]`.
@@ -53,12 +54,12 @@ The build script:
 
 - picks the latest `DmsProviderBridgeSetup-*.exe` from the bridge repo unless `-BridgeSetupRelativePath` is provided;
 - picks the latest `CredentialBrokerSetup-*.exe` from the broker repo unless `-BrokerSetupRelativePath` is provided;
-- copies the WFX plugin and config from `tc-wfx-plugin`;
+- copies the WFX plugin, runtime config, and localization file from `tc-wfx-plugin`;
 - compiles [installer.iss](installer.iss) with Inno Setup.
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.3.3-alpha.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.3.4-alpha.exe`
 
 Prepare payload only:
 
@@ -75,6 +76,7 @@ Payload layout:
 - `payload\installers\CredentialBrokerSetup.exe`
 - `payload\tc-wfx\TcWfxPlugin.wfx64`
 - `payload\tc-wfx\config.json`
+- `payload\tc-wfx\localize.json`
 
 ## Manual Install
 
@@ -85,10 +87,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1
 Useful options:
 
 ```powershell
--BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.4.19.exe
+-BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.4.21.exe
 -BrokerSetupPath C:\path\CredentialBrokerSetup-v0.2.9.exe
 -WfxPluginPath C:\path\TcWfxPlugin.wfx64
 -PluginConfigPath C:\path\config.json
+-PluginLocalizePath C:\path\localize.json
 -WinCmdIniPath C:\Users\<user>\AppData\Roaming\GHISLER\wincmd.ini
 -SkipBridge
 -SkipBroker

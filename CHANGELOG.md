@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.4-alpha] - 2026-06-13
+
+### Changed
+
+- Refreshed orchestrator payload for DMS Provider Bridge v0.4.21.
+- Refreshed WFX plugin payload for tc-wfx-plugin v0.2.6.
+- Kept Credential Broker payload on v0.2.9.
+- Added WFX `localize.json` to the orchestrator payload and install copy step.
+
 ## [v0.3.3-alpha] - 2026-06-13
 
 ### Changed

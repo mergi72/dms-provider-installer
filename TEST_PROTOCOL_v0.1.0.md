@@ -16,6 +16,7 @@ Expected result:
 - `payload\installers\CredentialBrokerSetup.exe` exists.
 - `payload\tc-wfx\TcWfxPlugin.wfx64` exists.
 - `payload\tc-wfx\config.json` exists.
+- `payload\tc-wfx\localize.json` exists.
 - No bridge config files are copied into the orchestrator payload.
 
 Full compile:
@@ -38,6 +39,7 @@ Expected flow:
 - Credential Broker setup runs.
 - WFX plugin is installed to `%ProgramFiles%\DMS Provider\tc-wfx`.
 - WFX `config.json` is present next to the plugin and under `tc-wfx\config`.
+- WFX `localize.json` is present under `tc-wfx\config`.
 - Total Commander registration is updated when `wincmd.ini` is detected.
 - A `wincmd.ini.*.bak` backup is created before modification.
 

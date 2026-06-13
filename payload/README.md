@@ -6,5 +6,6 @@ Generated layout:
 - installers/CredentialBrokerSetup.exe
 - tc-wfx/TcWfxPlugin.wfx64
 - tc-wfx/config.json
+- tc-wfx/localize.json
 
 Use scripts/prepare-payload.ps1 to refresh this directory from sibling repos.

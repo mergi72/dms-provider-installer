@@ -4,6 +4,7 @@ param(
     [string]$BrokerSetupPath,
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
+    [string]$PluginLocalizePath,
     [int]$HealthTimeoutSeconds = 60,
     [string]$BridgeHealthUrl = "http://127.0.0.1:8765/health",
     [string]$BrokerHealthUrl = "http://127.0.0.1:8776/health",
@@ -233,6 +234,15 @@ if ([string]::IsNullOrWhiteSpace($PluginConfigPath)) {
     )
 }
 
+if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
+    $PluginLocalizePath = Resolve-FirstExistingPath -Candidates @(
+        (Join-Path $scriptRoot "tc-wfx\localize.json"),
+        (Join-Path $scriptRoot "tc-wfx\config\localize.json"),
+        (Join-Path $repoRoot "payload\tc-wfx\localize.json"),
+        (Join-Path $repoRoot "payload\tc-wfx\config\localize.json")
+    )
+}
+
 if (-not $SkipBridge) {
     Invoke-SetupInstaller -Name "DMS Provider Bridge" -Path $BridgeSetupPath
 }
@@ -260,6 +270,7 @@ $wfxConfigRoot = Join-Path $wfxRoot "config"
 $pluginTargetPath = Join-Path $wfxRoot "TcWfxPlugin.wfx64"
 $pluginConfigTargetPath = Join-Path $wfxRoot "config.json"
 $pluginNestedConfigTargetPath = Join-Path $wfxConfigRoot "config.json"
+$pluginLocalizeTargetPath = Join-Path $wfxConfigRoot "localize.json"
 
 New-Item -ItemType Directory -Path $wfxRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $wfxConfigRoot -Force | Out-Null
@@ -267,6 +278,9 @@ New-Item -ItemType Directory -Path $wfxConfigRoot -Force | Out-Null
 Copy-Item -Path $WfxPluginPath -Destination $pluginTargetPath -Force
 Copy-Item -Path $PluginConfigPath -Destination $pluginConfigTargetPath -Force
 Copy-Item -Path $PluginConfigPath -Destination $pluginNestedConfigTargetPath -Force
+if (-not [string]::IsNullOrWhiteSpace($PluginLocalizePath) -and (Test-Path $PluginLocalizePath)) {
+    Copy-Item -Path $PluginLocalizePath -Destination $pluginLocalizeTargetPath -Force
+}
 
 if (-not $DisableTcRegistration) {
     $resolvedIniPath = Resolve-TcWinCmdIniPath -ExplicitPath $WinCmdIniPath
@@ -302,6 +316,7 @@ Write-Host "Bridge setup:       $(if ($SkipBridge) { 'skipped' } else { $BridgeS
 Write-Host "Broker setup:       $(if ($SkipBroker) { 'skipped' } else { $BrokerSetupPath })"
 Write-Host "WFX plugin:         $pluginTargetPath"
 Write-Host "WFX config:         $pluginConfigTargetPath"
+Write-Host "WFX localization:   $(if (Test-Path $pluginLocalizeTargetPath) { $pluginLocalizeTargetPath } else { 'not installed' })"
 Write-Host "Bridge health:      $BridgeHealthUrl"
 Write-Host "Broker health:      $BrokerHealthUrl"
 Write-Host "Install finished."
