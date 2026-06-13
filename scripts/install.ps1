@@ -6,6 +6,7 @@ param(
     [string]$PluginConfigPath,
     [string]$PluginLocalizePath,
     [string]$BrokerTaskName = "CredentialBroker",
+    [string]$BrokerInstallRoot = "$env:LOCALAPPDATA\Credential Broker",
     [int]$HealthTimeoutSeconds = 60,
     [string]$BridgeHealthUrl = "http://127.0.0.1:8765/health",
     [string]$BrokerHealthUrl = "http://127.0.0.1:8776/health",
@@ -239,11 +240,40 @@ function Wait-Health {
 }
 
 function Start-BrokerTask {
-    param([string]$TaskName)
+    param(
+        [string]$TaskName,
+        [string]$InstallRoot
+    )
 
-    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    $task = $null
+    for ($attempt = 1; $attempt -le 10; $attempt++) {
+        $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        if ($null -ne $task) {
+            break
+        }
+        Write-Host "Credential Broker scheduled task not visible yet ($attempt/10): $TaskName"
+        Start-Sleep -Seconds 1
+    }
+
     if ($null -eq $task) {
-        throw "Credential Broker scheduled task was not found: $TaskName"
+        $launcherPath = Join-Path $InstallRoot "start-credential-broker.ps1"
+        if (-not (Test-Path $launcherPath)) {
+            throw "Credential Broker scheduled task was not found and launcher is missing: task=$TaskName launcher=$launcherPath"
+        }
+
+        Write-Host "Credential Broker scheduled task was not found: $TaskName"
+        Write-Host "Starting Credential Broker launcher directly: $launcherPath"
+        Start-Process -FilePath "powershell.exe" -ArgumentList @(
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-WindowStyle",
+            "Hidden",
+            "-File",
+            $launcherPath
+        ) -WindowStyle Hidden | Out-Null
+        Write-Host "Credential Broker launcher start requested."
+        return
     }
 
     Write-Host "Starting Credential Broker scheduled task: $TaskName"
@@ -295,7 +325,7 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
 
 if (-not $SkipBroker) {
     Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath
-    Start-BrokerTask -TaskName $BrokerTaskName
+    Start-BrokerTask -TaskName $BrokerTaskName -InstallRoot $BrokerInstallRoot
     Wait-DiagnosticPause -Reason "Credential Broker setup/start step finished. Check the console above before continuing." -Force:$PauseOnBrokerStep
 }
 else {
