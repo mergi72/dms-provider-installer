@@ -239,6 +239,33 @@ function Wait-Health {
     throw "$Name health check did not pass within $TimeoutSeconds s: $Url"
 }
 
+function Write-LogTail {
+    param(
+        [string]$Path,
+        [int]$Lines = 80
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Host "Log not found: $Path"
+        return
+    }
+
+    Write-Host ""
+    Write-Host "Last $Lines lines from $Path"
+    Get-Content -Path $Path -Tail $Lines -ErrorAction SilentlyContinue | ForEach-Object {
+        Write-Host $_
+    }
+}
+
+function Write-BrokerDiagnostics {
+    param([string]$InstallRoot)
+
+    $logRoot = Join-Path $InstallRoot "logs"
+    Write-LogTail -Path (Join-Path $logRoot "installer.log")
+    Write-LogTail -Path (Join-Path $logRoot "broker-stdout.log")
+    Write-LogTail -Path (Join-Path $logRoot "broker-stderr.log")
+}
+
 function Start-BrokerTask {
     param(
         [string]$TaskName,
@@ -387,7 +414,13 @@ else {
 
 if (-not $SkipHealthCheck) {
     if (-not $SkipBroker) {
-        Wait-Health -Name "Credential Broker" -Url $BrokerHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+        try {
+            Wait-Health -Name "Credential Broker" -Url $BrokerHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+        }
+        catch {
+            Write-BrokerDiagnostics -InstallRoot $BrokerInstallRoot
+            throw
+        }
     }
     if (-not $SkipBridge) {
         Wait-Health -Name "Bridge" -Url $BridgeHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
