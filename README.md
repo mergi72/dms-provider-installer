@@ -1,7 +1,7 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.3.4--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.3.5--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -59,7 +59,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.3.4-alpha.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.3.5-alpha.exe`
 
 Prepare payload only:
 
