@@ -12,7 +12,9 @@ param(
     [switch]$SkipBridge,
     [switch]$SkipBroker,
     [switch]$SkipHealthCheck,
-    [switch]$DisableTcRegistration
+    [switch]$DisableTcRegistration,
+    [switch]$PauseOnError,
+    [switch]$PauseOnBrokerStep
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,6 +44,8 @@ if ($SkipBridge) { $installParams.SkipBridge = $true }
 if ($SkipBroker) { $installParams.SkipBroker = $true }
 if ($SkipHealthCheck) { $installParams.SkipHealthCheck = $true }
 if ($DisableTcRegistration) { $installParams.DisableTcRegistration = $true }
+if ($PauseOnError) { $installParams.PauseOnError = $true }
+if ($PauseOnBrokerStep) { $installParams.PauseOnBrokerStep = $true }
 
 & $installScript @installParams
 if ($LASTEXITCODE -ne 0) {

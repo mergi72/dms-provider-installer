@@ -1,7 +1,7 @@
 [Setup]
 AppId={{4B5D3C16-2A06-4A1A-AE22-08FBA70FE11D}
 AppName=DMS Provider Installer
-AppVersion=0.3.8-alpha
+AppVersion=0.3.9-alpha
 AppPublisher=mergi72
 DefaultDirName={localappdata}\Programs\DMS Provider
 DefaultGroupName=DMS Provider
@@ -10,7 +10,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=artifacts\installer
-OutputBaseFilename=DmsProviderInstaller-v0.3.8-alpha
+OutputBaseFilename=DmsProviderInstaller-v0.3.9-alpha
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -30,7 +30,7 @@ Name: "{app}\tc-wfx"
 Name: "{app}\tc-wfx\config"
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -InstallRoot ""{app}"" -BridgeSetupPath ""{app}\installers\DmsProviderBridgeSetup.exe"" -BrokerSetupPath ""{app}\installers\CredentialBrokerSetup.exe"" -WfxPluginPath ""{app}\tc-wfx\TcWfxPlugin.wfx64"" -PluginConfigPath ""{app}\tc-wfx\config.json"" -PluginLocalizePath ""{app}\tc-wfx\localize.json"""; Flags: waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -InstallRoot ""{app}"" -BridgeSetupPath ""{app}\installers\DmsProviderBridgeSetup.exe"" -BrokerSetupPath ""{app}\installers\CredentialBrokerSetup.exe"" -WfxPluginPath ""{app}\tc-wfx\TcWfxPlugin.wfx64"" -PluginConfigPath ""{app}\tc-wfx\config.json"" -PluginLocalizePath ""{app}\tc-wfx\localize.json"" -PauseOnError -PauseOnBrokerStep"; Flags: waituntilterminated
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\uninstall.ps1"" -InstallRoot ""{app}"""; Flags: runhidden waituntilterminated; RunOnceId: "DMSProviderOrchestratorUninstall"

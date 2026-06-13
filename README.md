@@ -1,7 +1,7 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.3.8--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.3.9--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -59,7 +59,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.3.8-alpha.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.3.9-alpha.exe`
 
 Prepare payload only:
 
@@ -97,6 +97,8 @@ Useful options:
 -SkipBroker
 -SkipHealthCheck
 -DisableTcRegistration
+-PauseOnError
+-PauseOnBrokerStep
 ```
 
 Default health endpoints:

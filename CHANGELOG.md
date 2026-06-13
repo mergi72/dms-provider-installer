@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.9-alpha] - 2026-06-13
+
+### Changed
+
+- Added installer diagnostics switches for pausing the main orchestration window after broker setup/start and after errors.
+- Enabled the diagnostic pauses in the packaged Inno installer so broker initialization errors remain visible on a clean machine.
+- Kept DMS Provider Bridge payload on v0.4.22.
+- Kept Credential Broker payload on v0.2.11.
+- Kept tc-wfx-plugin payload on v0.2.7.
+
 ## [v0.3.8-alpha] - 2026-06-13
 
 ### Changed
