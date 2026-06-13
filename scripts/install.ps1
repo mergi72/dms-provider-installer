@@ -266,46 +266,25 @@ function Write-BrokerDiagnostics {
     Write-LogTail -Path (Join-Path $logRoot "broker-stderr.log")
 }
 
-function Start-BrokerTask {
-    param(
-        [string]$TaskName,
-        [string]$InstallRoot
-    )
+function Start-BrokerLauncher {
+    param([string]$InstallRoot)
 
-    $task = $null
-    for ($attempt = 1; $attempt -le 10; $attempt++) {
-        $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-        if ($null -ne $task) {
-            break
-        }
-        Write-Host "Credential Broker scheduled task not visible yet ($attempt/10): $TaskName"
-        Start-Sleep -Seconds 1
+    $launcherPath = Join-Path $InstallRoot "start-credential-broker.ps1"
+    if (-not (Test-Path $launcherPath)) {
+        throw "Credential Broker launcher is missing: $launcherPath"
     }
 
-    if ($null -eq $task) {
-        $launcherPath = Join-Path $InstallRoot "start-credential-broker.ps1"
-        if (-not (Test-Path $launcherPath)) {
-            throw "Credential Broker scheduled task was not found and launcher is missing: task=$TaskName launcher=$launcherPath"
-        }
-
-        Write-Host "Credential Broker scheduled task was not found: $TaskName"
-        Write-Host "Starting Credential Broker launcher directly: $launcherPath"
-        Start-Process -FilePath "powershell.exe" -ArgumentList @(
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-WindowStyle",
-            "Hidden",
-            "-File",
-            $launcherPath
-        ) -WindowStyle Hidden | Out-Null
-        Write-Host "Credential Broker launcher start requested."
-        return
-    }
-
-    Write-Host "Starting Credential Broker scheduled task: $TaskName"
-    Start-ScheduledTask -TaskName $TaskName
-    Write-Host "Credential Broker scheduled task start requested: $TaskName"
+    Write-Host "Starting Credential Broker launcher directly: $launcherPath"
+    Start-Process -FilePath "powershell.exe" -ArgumentList @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-WindowStyle",
+        "Hidden",
+        "-File",
+        $launcherPath
+    ) -WindowStyle Hidden | Out-Null
+    Write-Host "Credential Broker launcher start requested."
 }
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -401,7 +380,7 @@ else {
 }
 
 if (-not $SkipBroker) {
-    Start-BrokerTask -TaskName $BrokerTaskName -InstallRoot $BrokerInstallRoot
+    Start-BrokerLauncher -InstallRoot $BrokerInstallRoot
     Wait-DiagnosticPause -Reason "Credential Broker start step finished after WFX installation. Check the console above before continuing." -Force:$PauseOnBrokerStep
 }
 
