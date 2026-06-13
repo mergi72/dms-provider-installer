@@ -35,9 +35,9 @@ Run the generated installer.
 
 Expected flow:
 
-- DMS Provider Bridge setup runs.
-- Credential Broker setup runs.
-- WFX plugin is installed to `%ProgramFiles%\DMS Provider\tc-wfx`.
+- Credential Broker setup runs first in the current user context.
+- WFX plugin is installed under the orchestrator user install root `tc-wfx` directory.
+- DMS Provider Bridge setup runs last and owns its own admin/elevation flow.
 - WFX `config.json` is present next to the plugin and under `tc-wfx\config`.
 - WFX `localize.json` is present under `tc-wfx\config`.
 - Total Commander registration is updated when `wincmd.ini` is detected.

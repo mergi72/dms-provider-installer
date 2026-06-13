@@ -1,29 +1,29 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.3.5--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.3.6--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
 Current development branch: `develop`  
 Stable release branch: `main`
 
 Orchestrator installer for the DMS Provider desktop stack.
 
-It bundles and runs the dedicated installers for:
+It bundles and runs the dedicated installers in this order:
 
-- DMS Provider Bridge
 - Credential Broker
 - Total Commander WFX plugin
+- DMS Provider Bridge
 
-The bridge installer owns bridge executable deployment, service/task setup, NSSM usage, health checks, and machine/user config locations. The credential broker installer owns broker deployment, per-user scheduled task setup, and broker config. This project owns only orchestration and Total Commander WFX installation/registration.
+The orchestrator runs in the current user context. The credential broker installer owns broker deployment, per-user scheduled task setup, and broker config. The bridge installer owns its own elevation/admin flow, bridge executable deployment, service/task setup, NSSM usage, health checks, and machine/user config locations. This project owns only orchestration and Total Commander WFX installation/registration.
 
 ## What This Project Does
 
 - Bundles `DmsProviderBridgeSetup.exe`.
 - Bundles `CredentialBrokerSetup.exe`.
-- Installs `TcWfxPlugin.wfx64` into `%ProgramFiles%\DMS Provider\tc-wfx`.
+- Installs `TcWfxPlugin.wfx64` into the orchestrator user install root under `tc-wfx`.
 - Installs WFX `config.json` next to the plugin and under `tc-wfx\config`.
 - Installs WFX localization from `localize.json` under `tc-wfx\config`.
-- Runs bridge and broker setup installers.
+- Runs broker setup first and bridge setup last.
 - Optionally verifies bridge and broker health endpoints.
 - Registers the WFX plugin in Total Commander `wincmd.ini` under `[FileSystemPlugins64]`.
 - Creates a `wincmd.ini` backup before modification.
@@ -59,7 +59,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.3.5-alpha.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.3.6-alpha.exe`
 
 Prepare payload only:
 
