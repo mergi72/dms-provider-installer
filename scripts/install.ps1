@@ -13,10 +13,36 @@ param(
     [switch]$SkipBridge,
     [switch]$SkipBroker,
     [switch]$SkipHealthCheck,
-    [switch]$DisableTcRegistration
+    [switch]$DisableTcRegistration,
+    [switch]$PauseOnError,
+    [switch]$PauseOnBrokerStep
 )
 
 $ErrorActionPreference = "Stop"
+
+function Wait-DiagnosticPause {
+    param(
+        [string]$Reason,
+        [switch]$Force
+    )
+
+    if (-not $Force -and -not $PauseOnError -and -not $PauseOnBrokerStep) {
+        return
+    }
+
+    Write-Host ""
+    Write-Host $Reason -ForegroundColor Yellow
+    Write-Host "Press Enter to continue..."
+    [void](Read-Host)
+}
+
+trap {
+    Write-Host ""
+    Write-Host "DMS Provider Installer failed." -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    Wait-DiagnosticPause -Reason "Installation is paused after an error so the console output can be inspected." -Force:$PauseOnError
+    throw
+}
 
 function Resolve-FirstExistingPath {
     param([string[]]$Candidates)
@@ -270,6 +296,7 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
 if (-not $SkipBroker) {
     Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath
     Start-BrokerTask -TaskName $BrokerTaskName
+    Wait-DiagnosticPause -Reason "Credential Broker setup/start step finished. Check the console above before continuing." -Force:$PauseOnBrokerStep
 }
 else {
     Write-Host "Credential Broker setup skipped."
