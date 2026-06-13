@@ -5,6 +5,7 @@ param(
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
     [string]$PluginLocalizePath,
+    [string]$BrokerTaskName = "CredentialBroker",
     [int]$HealthTimeoutSeconds = 60,
     [string]$BridgeHealthUrl = "http://127.0.0.1:8765/health",
     [string]$BrokerHealthUrl = "http://127.0.0.1:8776/health",
@@ -211,6 +212,19 @@ function Wait-Health {
     throw "$Name health check did not pass within $TimeoutSeconds s: $Url"
 }
 
+function Start-BrokerTask {
+    param([string]$TaskName)
+
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if ($null -eq $task) {
+        throw "Credential Broker scheduled task was not found: $TaskName"
+    }
+
+    Write-Host "Starting Credential Broker scheduled task: $TaskName"
+    Start-ScheduledTask -TaskName $TaskName
+    Write-Host "Credential Broker scheduled task start requested: $TaskName"
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot
 
@@ -255,6 +269,7 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
 
 if (-not $SkipBroker) {
     Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath
+    Start-BrokerTask -TaskName $BrokerTaskName
 }
 else {
     Write-Host "Credential Broker setup skipped."
