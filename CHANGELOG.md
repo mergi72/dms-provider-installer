@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.8-alpha] - 2026-06-13
+
+### Changed
+
+- Refreshed Credential Broker payload to v0.2.11.
+- Orchestrator now starts the `CredentialBroker` scheduled task after the broker setup returns, then runs its own broker health check.
+- Kept DMS Provider Bridge payload on v0.4.22.
+- Kept tc-wfx-plugin payload on v0.2.7.
+
 ## [v0.3.7-alpha] - 2026-06-13
 
 ### Changed
