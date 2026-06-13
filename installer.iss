@@ -30,7 +30,7 @@ Name: "{app}\tc-wfx"
 Name: "{app}\tc-wfx\config"
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -InstallRoot ""{app}"" -BridgeSetupPath ""{app}\installers\DmsProviderBridgeSetup.exe"" -BrokerSetupPath ""{app}\installers\CredentialBrokerSetup.exe"" -WfxPluginPath ""{app}\tc-wfx\TcWfxPlugin.wfx64"" -PluginConfigPath ""{app}\tc-wfx\config.json"" -PluginLocalizePath ""{app}\tc-wfx\localize.json"" -PauseOnError -PauseOnBrokerStep"; Flags: waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -InstallRoot ""{app}"" -BridgeSetupPath ""{app}\installers\DmsProviderBridgeSetup.exe"" -BrokerSetupPath ""{app}\installers\CredentialBrokerSetup.exe"" -WfxPluginPath ""{app}\tc-wfx\TcWfxPlugin.wfx64"" -PluginConfigPath ""{app}\tc-wfx\config.json"" -PluginLocalizePath ""{app}\tc-wfx\localize.json"" -PauseOnError"; Flags: waituntilterminated
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\uninstall.ps1"" -InstallRoot ""{app}"""; Flags: runhidden waituntilterminated; RunOnceId: "DMSProviderOrchestratorUninstall"

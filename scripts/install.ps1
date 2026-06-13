@@ -15,8 +15,7 @@ param(
     [switch]$SkipBroker,
     [switch]$SkipHealthCheck,
     [switch]$DisableTcRegistration,
-    [switch]$PauseOnError,
-    [switch]$PauseOnBrokerStep
+    [switch]$PauseOnError
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +26,7 @@ function Wait-DiagnosticPause {
         [switch]$Force
     )
 
-    if (-not $Force -and -not $PauseOnError -and -not $PauseOnBrokerStep) {
+    if (-not $Force -and -not $PauseOnError) {
         return
     }
 
@@ -266,27 +265,6 @@ function Write-BrokerDiagnostics {
     Write-LogTail -Path (Join-Path $logRoot "broker-stderr.log")
 }
 
-function Start-BrokerLauncher {
-    param([string]$InstallRoot)
-
-    $launcherPath = Join-Path $InstallRoot "start-credential-broker.ps1"
-    if (-not (Test-Path $launcherPath)) {
-        throw "Credential Broker launcher is missing: $launcherPath"
-    }
-
-    Write-Host "Starting Credential Broker launcher directly: $launcherPath"
-    Start-Process -FilePath "powershell.exe" -ArgumentList @(
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-WindowStyle",
-        "Hidden",
-        "-File",
-        $launcherPath
-    ) -WindowStyle Hidden | Out-Null
-    Write-Host "Credential Broker launcher start requested."
-}
-
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot
 
@@ -377,11 +355,6 @@ if (-not $DisableTcRegistration) {
 else {
     Write-Host "Automatic Total Commander registration disabled."
     Write-Host "Manual registration path: $pluginTargetPath"
-}
-
-if (-not $SkipBroker) {
-    Start-BrokerLauncher -InstallRoot $BrokerInstallRoot
-    Wait-DiagnosticPause -Reason "Credential Broker start step finished after WFX installation. Check the console above before continuing." -Force:$PauseOnBrokerStep
 }
 
 if (-not $SkipBridge) {
