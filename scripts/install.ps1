@@ -198,7 +198,8 @@ function Register-WfxPlugin {
 function Invoke-SetupInstaller {
     param(
         [string]$Name,
-        [string]$Path
+        [string]$Path,
+        [string[]]$Arguments = @("/SP-", "/NORESTART")
     )
 
     if (-not (Test-Path $Path)) {
@@ -206,7 +207,7 @@ function Invoke-SetupInstaller {
     }
 
     Write-Host "Starting $Name setup: $Path"
-    $process = Start-Process -FilePath $Path -ArgumentList @("/SP-", "/NORESTART") -Wait -PassThru -WindowStyle Normal
+    $process = Start-Process -FilePath $Path -ArgumentList $Arguments -Wait -PassThru -WindowStyle Normal
     if ($process.ExitCode -ne 0) {
         throw "$Name setup failed with exit code $($process.ExitCode)."
     }
@@ -308,7 +309,7 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
 }
 
 if (-not $SkipBroker) {
-    Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath
+    Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath -Arguments @("/SP-", "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
 }
 else {
     Write-Host "Credential Broker setup skipped."
