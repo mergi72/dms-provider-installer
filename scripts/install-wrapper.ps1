@@ -14,8 +14,7 @@ param(
     [switch]$SkipBroker,
     [switch]$SkipHealthCheck,
     [switch]$DisableTcRegistration,
-    [switch]$PauseOnError,
-    [switch]$PauseOnBrokerStep
+    [switch]$PauseOnError
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,8 +45,6 @@ if ($SkipBroker) { $installParams.SkipBroker = $true }
 if ($SkipHealthCheck) { $installParams.SkipHealthCheck = $true }
 if ($DisableTcRegistration) { $installParams.DisableTcRegistration = $true }
 if ($PauseOnError) { $installParams.PauseOnError = $true }
-if ($PauseOnBrokerStep) { $installParams.PauseOnBrokerStep = $true }
-
 & $installScript @installParams
 if ($LASTEXITCODE -ne 0) {
     throw "DMS Provider orchestration failed with exit code $LASTEXITCODE"
