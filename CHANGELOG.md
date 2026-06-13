@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 - Starts Credential Broker through its local launcher after WFX installation instead of depending on scheduled task lookup.
 - Refreshes the v0.2.12 broker payload with ScheduledTasks-compatible `Interactive` logon type.
 - Refreshes the v0.2.12 broker payload with ScheduledTasks-compatible `Limited` run level.
+- Refreshes the v0.2.12 broker payload to avoid version-specific `New-ScheduledTaskSettingsSet` parameters.
+- Refreshes the v0.2.12 broker payload to use `schtasks.exe` instead of PowerShell ScheduledTasks cmdlets.
 - Kept DMS Provider Bridge payload on v0.4.22.
 - Kept tc-wfx-plugin payload on v0.2.7.
 
