@@ -7,7 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Removed the nested `CredentialBrokerSetup.exe` child installer from the orchestrator package.
-- Bundles the Credential Broker runtime payload directly and runs `install-broker.ps1` from `%LOCALAPPDATA%\Credential Broker`.
+- Installs the Credential Broker runtime directly into `%LOCALAPPDATA%\Credential Broker`, matching the standalone broker installer layout.
+- Runs `%LOCALAPPDATA%\Credential Broker\install-broker.ps1` with the same install root.
 - Keeps broker startup, health wait, and per-user scheduled task registration in the broker install script without another Inno setup layer.
 - Kept DMS Provider Bridge payload on v0.4.22.
 - Kept tc-wfx-plugin payload on v0.2.7.

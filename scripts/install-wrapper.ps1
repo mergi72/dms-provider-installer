@@ -1,7 +1,6 @@
 param(
     [string]$InstallRoot = "$env:LOCALAPPDATA\Programs\DMS Provider",
     [string]$BridgeSetupPath,
-    [string]$BrokerPayloadPath,
     [string]$BrokerInstallRoot,
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
@@ -31,7 +30,7 @@ $installParams = @{
     BridgeHealthUrl = $BridgeHealthUrl
 }
 
-foreach ($name in @("BridgeSetupPath", "BrokerPayloadPath", "BrokerInstallRoot", "WfxPluginPath", "PluginConfigPath", "PluginLocalizePath", "WinCmdIniPath")) {
+foreach ($name in @("BridgeSetupPath", "BrokerInstallRoot", "WfxPluginPath", "PluginConfigPath", "PluginLocalizePath", "WinCmdIniPath")) {
     $value = Get-Variable -Name $name -ValueOnly
     if (-not [string]::IsNullOrWhiteSpace($value)) {
         $installParams[$name] = $value

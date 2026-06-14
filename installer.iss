@@ -17,7 +17,11 @@ WizardStyle=modern
 
 [Files]
 Source: "payload\installers\DmsProviderBridgeSetup.exe"; DestDir: "{app}\installers"; Flags: ignoreversion
-Source: "payload\broker\*"; DestDir: "{app}\broker"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "payload\credential-broker\credential-broker.exe"; DestDir: "{localappdata}\Credential Broker"; Flags: ignoreversion
+Source: "payload\credential-broker\install-broker.ps1"; DestDir: "{localappdata}\Credential Broker"; Flags: ignoreversion
+Source: "payload\credential-broker\uninstall-broker.ps1"; DestDir: "{localappdata}\Credential Broker"; Flags: ignoreversion
+Source: "payload\credential-broker\stop-credential-broker.ps1"; DestDir: "{localappdata}\Credential Broker"; Flags: ignoreversion
+Source: "payload\credential-broker\config\broker.json"; DestDir: "{localappdata}\Credential Broker\config"; Flags: ignoreversion
 Source: "payload\tc-wfx\TcWfxPlugin.wfx64"; DestDir: "{app}\tc-wfx"; Flags: ignoreversion
 Source: "payload\tc-wfx\config.json"; DestDir: "{app}\tc-wfx"; Flags: ignoreversion
 Source: "payload\tc-wfx\localize.json"; DestDir: "{app}\tc-wfx"; Flags: ignoreversion skipifsourcedoesntexist
@@ -26,12 +30,13 @@ Source: "scripts\uninstall.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Dirs]
 Name: "{app}\installers"
-Name: "{app}\broker"
+Name: "{localappdata}\Credential Broker\config"
+Name: "{localappdata}\Credential Broker\logs"
 Name: "{app}\tc-wfx"
 Name: "{app}\tc-wfx\config"
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -InstallRoot ""{app}"" -BridgeSetupPath ""{app}\installers\DmsProviderBridgeSetup.exe"" -BrokerPayloadPath ""{app}\broker"" -WfxPluginPath ""{app}\tc-wfx\TcWfxPlugin.wfx64"" -PluginConfigPath ""{app}\tc-wfx\config.json"" -PluginLocalizePath ""{app}\tc-wfx\localize.json"" -PauseOnError"; Flags: waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -InstallRoot ""{app}"" -BridgeSetupPath ""{app}\installers\DmsProviderBridgeSetup.exe"" -BrokerInstallRoot ""{localappdata}\Credential Broker"" -WfxPluginPath ""{app}\tc-wfx\TcWfxPlugin.wfx64"" -PluginConfigPath ""{app}\tc-wfx\config.json"" -PluginLocalizePath ""{app}\tc-wfx\localize.json"" -PauseOnError"; Flags: waituntilterminated
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\uninstall.ps1"" -InstallRoot ""{app}"""; Flags: runhidden waituntilterminated; RunOnceId: "DMSProviderOrchestratorUninstall"

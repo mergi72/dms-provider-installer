@@ -73,9 +73,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\prepare-payload.ps1 `
 Payload layout:
 
 - `payload\installers\DmsProviderBridgeSetup.exe`
-- `payload\broker\credential-broker.exe`
-- `payload\broker\install-broker.ps1`
-- `payload\broker\config\broker.json`
+- `payload\credential-broker\credential-broker.exe`
+- `payload\credential-broker\install-broker.ps1`
+- `payload\credential-broker\config\broker.json`
 - `payload\tc-wfx\TcWfxPlugin.wfx64`
 - `payload\tc-wfx\config.json`
 - `payload\tc-wfx\localize.json`
@@ -90,7 +90,6 @@ Useful options:
 
 ```powershell
 -BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.4.22.exe
--BrokerPayloadPath C:\path\payload\broker
 -BrokerInstallRoot C:\Users\<user>\AppData\Local\Credential Broker
 -WfxPluginPath C:\path\TcWfxPlugin.wfx64
 -PluginConfigPath C:\path\config.json

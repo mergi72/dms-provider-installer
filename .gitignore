@@ -9,7 +9,7 @@ out/
 dist/
 artifacts/
 payload/installers/*.exe
-payload/broker/
+payload/credential-broker/
 payload/bridge/*.exe
 payload/bridge/config/*.json
 payload/tc-wfx/*.wfx64

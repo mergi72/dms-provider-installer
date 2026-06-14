@@ -13,8 +13,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-inno-installer.ps1 -Ski
 Expected result:
 
 - `payload\installers\DmsProviderBridgeSetup.exe` exists.
-- `payload\broker\credential-broker.exe` exists.
-- `payload\broker\install-broker.ps1` exists.
+- `payload\credential-broker\credential-broker.exe` exists.
+- `payload\credential-broker\install-broker.ps1` exists.
 - `payload\tc-wfx\TcWfxPlugin.wfx64` exists.
 - `payload\tc-wfx\config.json` exists.
 - `payload\tc-wfx\localize.json` exists.
