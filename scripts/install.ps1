@@ -212,6 +212,20 @@ function Invoke-SetupInstaller {
     Write-Host "$Name setup finished."
 }
 
+function Quote-ProcessArgument {
+    param([string]$Value)
+
+    if ($null -eq $Value) {
+        return '""'
+    }
+
+    if ($Value -match '[\s"]') {
+        return '"' + ($Value -replace '"', '\"') + '"'
+    }
+
+    return $Value
+}
+
 function Invoke-PowerShellScript {
     param(
         [string]$Name,
@@ -223,7 +237,8 @@ function Invoke-PowerShellScript {
         throw "$Name script not found: $Path"
     }
 
-    $argumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $Path) + $Arguments
+    $argumentList = (@("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $Path) + $Arguments |
+        ForEach-Object { Quote-ProcessArgument $_ }) -join " "
     Write-Host "Starting $Name script: $Path"
     $process = Start-Process -FilePath "powershell.exe" -ArgumentList $argumentList -Wait -PassThru -WindowStyle Normal
     if ($process.ExitCode -ne 0) {
