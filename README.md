@@ -1,7 +1,7 @@
 # dms-provider-installer
 
 [![Status](https://img.shields.io/badge/Status-Alpha-orange)](https://github.com/mergi72/dms-provider-installer)
-[![Version](https://img.shields.io/badge/Version-v0.3.12--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
+[![Version](https://img.shields.io/badge/Version-v0.3.13--alpha-blue)](https://github.com/mergi72/dms-provider-installer)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -24,7 +24,7 @@ The orchestrator runs in the current user context. The credential broker install
 - Installs WFX `config.json` next to the plugin and under `tc-wfx\config`.
 - Installs WFX localization from `localize.json` under `tc-wfx\config`.
 - Runs broker setup first and bridge setup last.
-- Optionally verifies bridge and broker health endpoints.
+- Optionally verifies the bridge health endpoint.
 - Registers the WFX plugin in Total Commander `wincmd.ini` under `[FileSystemPlugins64]`.
 - Creates a `wincmd.ini` backup before modification.
 
@@ -59,7 +59,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.3.12-alpha.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.3.13-alpha.exe`
 
 Prepare payload only:
 
@@ -98,13 +98,11 @@ Useful options:
 -SkipHealthCheck
 -DisableTcRegistration
 -PauseOnError
--PauseOnBrokerStep
 ```
 
-Default health endpoints:
+Default health endpoint:
 
 - Bridge: `http://127.0.0.1:8765/health`
-- Credential Broker: `http://127.0.0.1:8776/health`
 
 ## Uninstall
 
