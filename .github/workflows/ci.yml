@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+
+jobs:
+  powershell-smoke:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem -Path scripts -Filter *.ps1 -File -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              Write-Error "$($_.FullName) has PowerShell parse errors: $($errors | Out-String)"
+            }
+          }
+          if ($failed) {
+            throw "PowerShell syntax validation failed."
+          }
+
+      - name: Validate installer metadata
+        shell: pwsh
+        run: |
+          $iss = Get-Content -Path installer.iss -Raw
+          foreach ($expected in @(
+            "AppName=DMS Provider Installer",
+            "AppVersion=0.5.0-beta",
+            "OutputBaseFilename=DmsProviderInstaller-v0.5.0-beta"
+          )) {
+            if (-not $iss.Contains($expected)) {
+              throw "installer.iss is missing expected metadata: $expected"
+            }
+          }
+
+      - name: Prepare mock payload sources
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "payload-sources"
+          $bridge = Join-Path $root "dms-provider-bridge"
+          $broker = Join-Path $root "credential-broker"
+          $wfx = Join-Path $root "tc-wfx-plugin"
+
+          New-Item -ItemType Directory -Force -Path `
+            (Join-Path $bridge "artifacts/installer"), `
+            (Join-Path $broker "artifacts/broker-installer-payload/config"), `
+            (Join-Path $wfx "artifacts/TcWfxPlugin-win-x64"), `
+            (Join-Path $wfx "config") | Out-Null
+
+          Set-Content -Path (Join-Path $bridge "artifacts/installer/DmsProviderBridgeSetup-v0.5.0-beta.exe") -Value "mock bridge setup"
+
+          Set-Content -Path (Join-Path $broker "artifacts/broker-installer-payload/credential-broker.exe") -Value "mock broker exe"
+          Set-Content -Path (Join-Path $broker "artifacts/broker-installer-payload/install-broker.ps1") -Value "Write-Host 'mock install'"
+          Set-Content -Path (Join-Path $broker "artifacts/broker-installer-payload/uninstall-broker.ps1") -Value "Write-Host 'mock uninstall'"
+          Set-Content -Path (Join-Path $broker "artifacts/broker-installer-payload/stop-credential-broker.ps1") -Value "Write-Host 'mock stop'"
+          Set-Content -Path (Join-Path $broker "artifacts/broker-installer-payload/config/broker.json") -Value "{}"
+
+          Set-Content -Path (Join-Path $wfx "artifacts/TcWfxPlugin-win-x64/TcWfxPlugin.wfx64") -Value "mock wfx"
+          Set-Content -Path (Join-Path $wfx "config/config.json") -Value "{}"
+          Set-Content -Path (Join-Path $wfx "config/localize.json") -Value "{}"
+
+          "BRIDGE_REPO=$bridge" >> $env:GITHUB_ENV
+          "BROKER_REPO=$broker" >> $env:GITHUB_ENV
+          "WFX_REPO=$wfx" >> $env:GITHUB_ENV
+
+      - name: Run installer payload build smoke
+        shell: pwsh
+        run: |
+          ./scripts/build-inno-installer.ps1 `
+            -BridgeRepoPath $env:BRIDGE_REPO `
+            -CredentialBrokerRepoPath $env:BROKER_REPO `
+            -TcPluginRepoPath $env:WFX_REPO `
+            -SkipCompile
+
+      - name: Verify prepared payload
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            "payload/installers/DmsProviderBridgeSetup.exe",
+            "payload/credential-broker/credential-broker.exe",
+            "payload/credential-broker/install-broker.ps1",
+            "payload/credential-broker/uninstall-broker.ps1",
+            "payload/credential-broker/stop-credential-broker.ps1",
+            "payload/credential-broker/config/broker.json",
+            "payload/tc-wfx/TcWfxPlugin.wfx64",
+            "payload/tc-wfx/config.json",
+            "payload/tc-wfx/localize.json"
+          )) {
+            if (-not (Test-Path $path)) {
+              throw "Prepared payload file missing: $path"
+            }
+          }
