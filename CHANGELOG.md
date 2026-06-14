@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.5.0-beta] - 2026-06-14
+
+- Beta release candidate for external Total Commander testing.
+- Bundles DMS Provider Bridge v0.5.0-beta.
+- Bundles Credential Broker v0.5.0-beta user-level installer payload.
+- Bundles tc-wfx-plugin v0.5.0-beta.
+
 ## [v0.3.13-alpha] - 2026-06-14
 
 ### Changed
