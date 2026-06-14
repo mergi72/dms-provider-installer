@@ -212,22 +212,6 @@ function Invoke-SetupInstaller {
     Write-Host "$Name setup finished."
 }
 
-function Invoke-PowerShellScript {
-    param(
-        [string]$Name,
-        [string]$Path,
-        [string[]]$Arguments = @()
-    )
-
-    if (-not (Test-Path $Path)) {
-        throw "$Name script not found: $Path"
-    }
-
-    Write-Host "Starting $Name script: $Path"
-    & $Path @Arguments
-    Write-Host "$Name script finished."
-}
-
 function Install-CredentialBrokerFromPayload {
     param(
         [string]$PayloadPath,
@@ -254,9 +238,13 @@ function Install-CredentialBrokerFromPayload {
     Copy-Item -Path (Join-Path $PayloadPath "*") -Destination $TargetRoot -Recurse -Force
 
     $brokerInstallScript = Join-Path $TargetRoot "install-broker.ps1"
-    Invoke-PowerShellScript -Name "Credential Broker" -Path $brokerInstallScript -Arguments @(
-        "-InstallRoot", $TargetRoot
-    )
+    if (-not (Test-Path $brokerInstallScript)) {
+        throw "Credential Broker script not found: $brokerInstallScript"
+    }
+
+    Write-Host "Starting Credential Broker script: $brokerInstallScript"
+    & $brokerInstallScript -InstallRoot $TargetRoot
+    Write-Host "Credential Broker script finished."
 }
 
 function Wait-Health {
