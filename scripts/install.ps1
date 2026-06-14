@@ -237,12 +237,13 @@ function Install-CredentialBrokerFromPayload {
     New-Item -ItemType Directory -Path $TargetRoot -Force | Out-Null
     Copy-Item -Path (Join-Path $PayloadPath "*") -Destination $TargetRoot -Recurse -Force
 
-    $brokerInstallScript = Join-Path $TargetRoot "install-broker.ps1"
+    $brokerInstallScript = Join-Path $PayloadPath "install-broker.ps1"
     if (-not (Test-Path $brokerInstallScript)) {
         throw "Credential Broker script not found: $brokerInstallScript"
     }
 
     Write-Host "Starting Credential Broker script: $brokerInstallScript"
+    Write-Host "Credential Broker install root: $TargetRoot"
     & $brokerInstallScript -InstallRoot $TargetRoot
     Write-Host "Credential Broker script finished."
 }
