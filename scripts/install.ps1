@@ -310,6 +310,15 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
 
 if (-not $SkipBroker) {
     Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath -Arguments @("/SP-", "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
+    if (-not $SkipHealthCheck) {
+        try {
+            Wait-Health -Name "Credential Broker" -Url $BrokerHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+        }
+        catch {
+            Write-BrokerDiagnostics -InstallRoot $BrokerInstallRoot
+            throw
+        }
+    }
 }
 else {
     Write-Host "Credential Broker setup skipped."
@@ -366,15 +375,6 @@ else {
 }
 
 if (-not $SkipHealthCheck) {
-    if (-not $SkipBroker) {
-        try {
-            Wait-Health -Name "Credential Broker" -Url $BrokerHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
-        }
-        catch {
-            Write-BrokerDiagnostics -InstallRoot $BrokerInstallRoot
-            throw
-        }
-    }
     if (-not $SkipBridge) {
         Wait-Health -Name "Bridge" -Url $BridgeHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
     }
