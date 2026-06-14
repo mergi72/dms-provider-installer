@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.13-alpha] - 2026-06-14
+
+### Changed
+
+- Refreshed Credential Broker payload to the validated v0.2.12 installer.
+- Kept the orchestrator broker flow simple: run the dedicated broker setup and wait for it to exit.
+- Removed obsolete broker health/task handling from the orchestrator; broker startup, health wait, and per-user scheduled task registration belong to the broker installer.
+- Kept DMS Provider Bridge payload on v0.4.22.
+- Kept tc-wfx-plugin payload on v0.2.7.
+
 ## [v0.3.12-alpha] - 2026-06-13
 
 ### Changed

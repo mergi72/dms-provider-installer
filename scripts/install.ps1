@@ -5,11 +5,8 @@ param(
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
     [string]$PluginLocalizePath,
-    [string]$BrokerTaskName = "CredentialBroker",
-    [string]$BrokerInstallRoot = "$env:LOCALAPPDATA\Credential Broker",
     [int]$HealthTimeoutSeconds = 60,
     [string]$BridgeHealthUrl = "http://127.0.0.1:8765/health",
-    [string]$BrokerHealthUrl = "http://127.0.0.1:8776/health",
     [string]$WinCmdIniPath,
     [switch]$SkipBridge,
     [switch]$SkipBroker,
@@ -239,33 +236,6 @@ function Wait-Health {
     throw "$Name health check did not pass within $TimeoutSeconds s: $Url"
 }
 
-function Write-LogTail {
-    param(
-        [string]$Path,
-        [int]$Lines = 80
-    )
-
-    if (-not (Test-Path $Path)) {
-        Write-Host "Log not found: $Path"
-        return
-    }
-
-    Write-Host ""
-    Write-Host "Last $Lines lines from $Path"
-    Get-Content -Path $Path -Tail $Lines -ErrorAction SilentlyContinue | ForEach-Object {
-        Write-Host $_
-    }
-}
-
-function Write-BrokerDiagnostics {
-    param([string]$InstallRoot)
-
-    $logRoot = Join-Path $InstallRoot "logs"
-    Write-LogTail -Path (Join-Path $logRoot "installer.log")
-    Write-LogTail -Path (Join-Path $logRoot "broker-stdout.log")
-    Write-LogTail -Path (Join-Path $logRoot "broker-stderr.log")
-}
-
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot
 
@@ -380,5 +350,4 @@ Write-Host "WFX plugin:         $pluginTargetPath"
 Write-Host "WFX config:         $pluginConfigTargetPath"
 Write-Host "WFX localization:   $(if (Test-Path $pluginLocalizeTargetPath) { $pluginLocalizeTargetPath } else { 'not installed' })"
 Write-Host "Bridge health:      $BridgeHealthUrl"
-Write-Host "Broker health:      $BrokerHealthUrl"
 Write-Host "Install finished."
