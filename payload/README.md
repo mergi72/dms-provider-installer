@@ -3,7 +3,9 @@ Payload staging directory for the DMS Provider orchestrator installer.
 Generated layout:
 
 - installers/DmsProviderBridgeSetup.exe
-- installers/CredentialBrokerSetup.exe
+- broker/credential-broker.exe
+- broker/install-broker.ps1
+- broker/config/broker.json
 - tc-wfx/TcWfxPlugin.wfx64
 - tc-wfx/config.json
 - tc-wfx/localize.json

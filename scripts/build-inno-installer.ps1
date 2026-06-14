@@ -2,7 +2,6 @@ param(
     [string]$BridgeRepoPath = "..\dms-provider-bridge",
     [string]$BridgeSetupRelativePath,
     [string]$CredentialBrokerRepoPath = "..\credential-broker",
-    [string]$BrokerSetupRelativePath,
     [string]$TcPluginRepoPath = "..\tc-wfx-plugin",
     [string]$InnoCompilerPath,
     [switch]$SkipCompile
@@ -53,10 +52,6 @@ $prepareParams = @{
 
 if (-not [string]::IsNullOrWhiteSpace($BridgeSetupRelativePath)) {
     $prepareParams.BridgeSetupRelativePath = $BridgeSetupRelativePath
-}
-
-if (-not [string]::IsNullOrWhiteSpace($BrokerSetupRelativePath)) {
-    $prepareParams.BrokerSetupRelativePath = $BrokerSetupRelativePath
 }
 
 & $preparePayloadScript @prepareParams

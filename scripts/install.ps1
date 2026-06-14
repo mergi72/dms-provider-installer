@@ -1,7 +1,8 @@
 param(
     [string]$InstallRoot = "$env:LOCALAPPDATA\Programs\DMS Provider",
     [string]$BridgeSetupPath,
-    [string]$BrokerSetupPath,
+    [string]$BrokerPayloadPath,
+    [string]$BrokerInstallRoot = "$env:LOCALAPPDATA\Credential Broker",
     [string]$WfxPluginPath,
     [string]$PluginConfigPath,
     [string]$PluginLocalizePath,
@@ -211,6 +212,57 @@ function Invoke-SetupInstaller {
     Write-Host "$Name setup finished."
 }
 
+function Invoke-PowerShellScript {
+    param(
+        [string]$Name,
+        [string]$Path,
+        [string[]]$Arguments = @()
+    )
+
+    if (-not (Test-Path $Path)) {
+        throw "$Name script not found: $Path"
+    }
+
+    $argumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $Path) + $Arguments
+    Write-Host "Starting $Name script: $Path"
+    $process = Start-Process -FilePath "powershell.exe" -ArgumentList $argumentList -Wait -PassThru -WindowStyle Normal
+    if ($process.ExitCode -ne 0) {
+        throw "$Name script failed with exit code $($process.ExitCode)."
+    }
+    Write-Host "$Name script finished."
+}
+
+function Install-CredentialBrokerFromPayload {
+    param(
+        [string]$PayloadPath,
+        [string]$TargetRoot
+    )
+
+    if ([string]::IsNullOrWhiteSpace($PayloadPath) -or -not (Test-Path $PayloadPath)) {
+        throw "Credential Broker payload not found: $PayloadPath"
+    }
+
+    $requiredPayloadFiles = @(
+        (Join-Path $PayloadPath "credential-broker.exe"),
+        (Join-Path $PayloadPath "install-broker.ps1"),
+        (Join-Path $PayloadPath "config\broker.json")
+    )
+
+    foreach ($requiredPayloadFile in $requiredPayloadFiles) {
+        if (-not (Test-Path $requiredPayloadFile)) {
+            throw "Credential Broker payload file not found: $requiredPayloadFile"
+        }
+    }
+
+    New-Item -ItemType Directory -Path $TargetRoot -Force | Out-Null
+    Copy-Item -Path (Join-Path $PayloadPath "*") -Destination $TargetRoot -Recurse -Force
+
+    $brokerInstallScript = Join-Path $TargetRoot "install-broker.ps1"
+    Invoke-PowerShellScript -Name "Credential Broker" -Path $brokerInstallScript -Arguments @(
+        "-InstallRoot", $TargetRoot
+    )
+}
+
 function Wait-Health {
     param(
         [string]$Name,
@@ -246,10 +298,10 @@ if ([string]::IsNullOrWhiteSpace($BridgeSetupPath)) {
     )
 }
 
-if ([string]::IsNullOrWhiteSpace($BrokerSetupPath)) {
-    $BrokerSetupPath = Resolve-FirstExistingPath -Candidates @(
-        (Join-Path $scriptRoot "installers\CredentialBrokerSetup.exe"),
-        (Join-Path $repoRoot "payload\installers\CredentialBrokerSetup.exe")
+if ([string]::IsNullOrWhiteSpace($BrokerPayloadPath)) {
+    $BrokerPayloadPath = Resolve-FirstExistingPath -Candidates @(
+        (Join-Path $scriptRoot "broker"),
+        (Join-Path $repoRoot "payload\broker")
     )
 }
 
@@ -279,10 +331,10 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
 }
 
 if (-not $SkipBroker) {
-    Invoke-SetupInstaller -Name "Credential Broker" -Path $BrokerSetupPath -Arguments @("/SP-", "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
+    Install-CredentialBrokerFromPayload -PayloadPath $BrokerPayloadPath -TargetRoot $BrokerInstallRoot
 }
 else {
-    Write-Host "Credential Broker setup skipped."
+    Write-Host "Credential Broker install skipped."
 }
 
 if ([string]::IsNullOrWhiteSpace($WfxPluginPath) -or -not (Test-Path $WfxPluginPath)) {
@@ -345,7 +397,7 @@ Write-Host ""
 Write-Host "DMS Provider orchestration summary"
 Write-Host "Install root:       $InstallRoot"
 Write-Host "Bridge setup:       $(if ($SkipBridge) { 'skipped' } else { $BridgeSetupPath })"
-Write-Host "Broker setup:       $(if ($SkipBroker) { 'skipped' } else { $BrokerSetupPath })"
+Write-Host "Broker payload:     $(if ($SkipBroker) { 'skipped' } else { $BrokerPayloadPath })"
 Write-Host "WFX plugin:         $pluginTargetPath"
 Write-Host "WFX config:         $pluginConfigTargetPath"
 Write-Host "WFX localization:   $(if (Test-Path $pluginLocalizeTargetPath) { $pluginLocalizeTargetPath } else { 'not installed' })"

@@ -19,11 +19,11 @@ The orchestrator runs in the current user context. The credential broker install
 ## What This Project Does
 
 - Bundles `DmsProviderBridgeSetup.exe`.
-- Bundles `CredentialBrokerSetup.exe`.
+- Bundles the Credential Broker runtime payload directly.
 - Installs `TcWfxPlugin.wfx64` into the orchestrator user install root under `tc-wfx`.
 - Installs WFX `config.json` next to the plugin and under `tc-wfx\config`.
 - Installs WFX localization from `localize.json` under `tc-wfx\config`.
-- Runs broker setup first and bridge setup last.
+- Installs the Credential Broker runtime first and bridge setup last.
 - Optionally verifies the bridge health endpoint.
 - Registers the WFX plugin in Total Commander `wincmd.ini` under `[FileSystemPlugins64]`.
 - Creates a `wincmd.ini` backup before modification.
@@ -53,7 +53,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-inno-installer.ps1 `
 The build script:
 
 - picks the latest `DmsProviderBridgeSetup-*.exe` from the bridge repo unless `-BridgeSetupRelativePath` is provided;
-- picks the latest `CredentialBrokerSetup-*.exe` from the broker repo unless `-BrokerSetupRelativePath` is provided;
+- copies the prepared Credential Broker runtime payload from `credential-broker`;
 - copies the WFX plugin, runtime config, and localization file from `tc-wfx-plugin`;
 - compiles [installer.iss](installer.iss) with Inno Setup.
 
@@ -73,7 +73,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\prepare-payload.ps1 `
 Payload layout:
 
 - `payload\installers\DmsProviderBridgeSetup.exe`
-- `payload\installers\CredentialBrokerSetup.exe`
+- `payload\broker\credential-broker.exe`
+- `payload\broker\install-broker.ps1`
+- `payload\broker\config\broker.json`
 - `payload\tc-wfx\TcWfxPlugin.wfx64`
 - `payload\tc-wfx\config.json`
 - `payload\tc-wfx\localize.json`
@@ -88,7 +90,8 @@ Useful options:
 
 ```powershell
 -BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.4.22.exe
--BrokerSetupPath C:\path\CredentialBrokerSetup-v0.2.12.exe
+-BrokerPayloadPath C:\path\payload\broker
+-BrokerInstallRoot C:\Users\<user>\AppData\Local\Credential Broker
 -WfxPluginPath C:\path\TcWfxPlugin.wfx64
 -PluginConfigPath C:\path\config.json
 -PluginLocalizePath C:\path\localize.json

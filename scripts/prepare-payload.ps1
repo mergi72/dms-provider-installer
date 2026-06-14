@@ -2,7 +2,6 @@ param(
     [string]$BridgeRepoPath = "..\dms-provider-bridge",
     [string]$BridgeSetupRelativePath,
     [string]$CredentialBrokerRepoPath = "..\credential-broker",
-    [string]$BrokerSetupRelativePath,
     [string]$TcPluginRepoPath = "..\tc-wfx-plugin",
     [string]$TcPluginRelativePath = "artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.wfx64",
     [string]$TcPluginDllRelativePath = "artifacts\TcWfxPlugin-win-x64\TcWfxPlugin.dll",
@@ -105,13 +104,17 @@ if (-not [System.IO.Path]::IsPathRooted($PayloadDir)) {
 $installersPayloadDir = Join-Path $PayloadDir "installers"
 $tcPayloadDir = Join-Path $PayloadDir "tc-wfx"
 $targetBridgeSetup = Join-Path $installersPayloadDir "DmsProviderBridgeSetup.exe"
-$targetBrokerSetup = Join-Path $installersPayloadDir "CredentialBrokerSetup.exe"
+$oldBrokerSetup = Join-Path $installersPayloadDir "CredentialBrokerSetup.exe"
+$brokerPayloadDir = Join-Path $PayloadDir "broker"
 $targetPluginWfx = Join-Path $tcPayloadDir "TcWfxPlugin.wfx64"
 $targetPluginConfig = Join-Path $tcPayloadDir "config.json"
 $targetPluginLocalize = Join-Path $tcPayloadDir "localize.json"
 
 $sourceBridgeSetup = Resolve-LatestInstaller -RepoPath $BridgeRepoPath -RelativePath $BridgeSetupRelativePath -Pattern "DmsProviderBridgeSetup-*.exe" -Name "Bridge"
-$sourceBrokerSetup = Resolve-LatestInstaller -RepoPath $CredentialBrokerRepoPath -RelativePath $BrokerSetupRelativePath -Pattern "CredentialBrokerSetup-*.exe" -Name "Credential Broker"
+$sourceBrokerPayloadDir = Join-Path $CredentialBrokerRepoPath "artifacts\broker-installer-payload"
+if (-not (Test-Path $sourceBrokerPayloadDir)) {
+    throw "Credential Broker payload directory not found: $sourceBrokerPayloadDir"
+}
 
 $sourcePluginConfig = Join-Path $TcPluginRepoPath $TcPluginConfigRelativePath
 $sourcePluginLocalize = Join-Path $TcPluginRepoPath $TcPluginLocalizeRelativePath
@@ -123,10 +126,17 @@ if (-not (Test-Path $sourcePluginConfig)) {
 }
 
 New-Item -ItemType Directory -Path $installersPayloadDir -Force | Out-Null
+if (Test-Path $oldBrokerSetup) {
+    Remove-Item -Path $oldBrokerSetup -Force
+}
+if (Test-Path $brokerPayloadDir) {
+    Remove-Item -Path $brokerPayloadDir -Recurse -Force
+}
+New-Item -ItemType Directory -Path $brokerPayloadDir -Force | Out-Null
 New-Item -ItemType Directory -Path $tcPayloadDir -Force | Out-Null
 
 Copy-Item -Path $sourceBridgeSetup -Destination $targetBridgeSetup -Force
-Copy-Item -Path $sourceBrokerSetup -Destination $targetBrokerSetup -Force
+Copy-Item -Path (Join-Path $sourceBrokerPayloadDir "*") -Destination $brokerPayloadDir -Recurse -Force
 Copy-Item -Path $pluginSourceToCopy -Destination $targetPluginWfx -Force
 Copy-Item -Path $sourcePluginConfig -Destination $targetPluginConfig -Force
 if (Test-Path $sourcePluginLocalize) {
@@ -134,14 +144,15 @@ if (Test-Path $sourcePluginLocalize) {
 }
 
 $bridgeInfo = Get-Item $targetBridgeSetup
-$brokerInfo = Get-Item $targetBrokerSetup
+$brokerExeInfo = Get-Item (Join-Path $brokerPayloadDir "credential-broker.exe")
 $pluginInfo = Get-Item $targetPluginWfx
 $configInfo = Get-Item $targetPluginConfig
 $localizeInfo = if (Test-Path $targetPluginLocalize) { Get-Item $targetPluginLocalize } else { $null }
 
 Write-Host "Payload prepared."
 Write-Host "Bridge setup: $($bridgeInfo.FullName) ($($bridgeInfo.Length) bytes)"
-Write-Host "Broker setup: $($brokerInfo.FullName) ($($brokerInfo.Length) bytes)"
+Write-Host "Broker payload: $brokerPayloadDir"
+Write-Host "Broker exe:     $($brokerExeInfo.FullName) ($($brokerExeInfo.Length) bytes)"
 Write-Host "Plugin:       $($pluginInfo.FullName) ($($pluginInfo.Length) bytes)"
 Write-Host "Config:       $($configInfo.FullName)"
 if ($null -ne $localizeInfo) {
