@@ -41,6 +41,16 @@ trap {
     throw
 }
 
+$script:InstallStepNumber = 0
+
+function Write-InstallStep {
+    param([string]$Title)
+
+    $script:InstallStepNumber++
+    Write-Host ""
+    Write-Host ("[{0}] {1}" -f $script:InstallStepNumber, $Title) -ForegroundColor Cyan
+}
+
 function Resolve-FirstExistingPath {
     param([string[]]$Candidates)
 
@@ -298,6 +308,7 @@ if ([string]::IsNullOrWhiteSpace($PluginLocalizePath)) {
 }
 
 if (-not $SkipBroker) {
+    Write-InstallStep "Install Credential Broker"
     Install-CredentialBroker -TargetRoot $BrokerInstallRoot
 }
 else {
@@ -319,6 +330,7 @@ $pluginConfigTargetPath = Join-Path $wfxRoot "config.json"
 $pluginNestedConfigTargetPath = Join-Path $wfxConfigRoot "config.json"
 $pluginLocalizeTargetPath = Join-Path $wfxConfigRoot "localize.json"
 
+Write-InstallStep "Install Total Commander WFX files"
 New-Item -ItemType Directory -Path $wfxRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $wfxConfigRoot -Force | Out-Null
 
@@ -330,6 +342,7 @@ if (-not [string]::IsNullOrWhiteSpace($PluginLocalizePath) -and (Test-Path $Plug
 }
 
 if (-not $DisableTcRegistration) {
+    Write-InstallStep "Register Total Commander WFX plugin"
     $resolvedIniPath = Resolve-TcWinCmdIniPath -ExplicitPath $WinCmdIniPath
     if (-not [string]::IsNullOrWhiteSpace($resolvedIniPath)) {
         $iniBackup = Backup-File -Path $resolvedIniPath
@@ -348,6 +361,7 @@ else {
 }
 
 if (-not $SkipBridge) {
+    Write-InstallStep "Run DMS Provider Bridge setup"
     Invoke-SetupInstaller -Name "DMS Provider Bridge" -Path $BridgeSetupPath
 }
 else {
@@ -356,11 +370,12 @@ else {
 
 if (-not $SkipHealthCheck) {
     if (-not $SkipBridge) {
+        Write-InstallStep "Verify DMS Provider Bridge health"
         Wait-Health -Name "Bridge" -Url $BridgeHealthUrl -TimeoutSeconds $HealthTimeoutSeconds
     }
 }
 
-Write-Host ""
+Write-InstallStep "Installation summary"
 Write-Host "DMS Provider orchestration summary"
 Write-Host "Install root:       $InstallRoot"
 Write-Host "Bridge setup:       $(if ($SkipBridge) { 'skipped' } else { $BridgeSetupPath })"

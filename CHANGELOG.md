@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.14-beta] - 2026-06-19
+
+### Changed
+
+- Refreshed the orchestrator installer version for the current bridge/configurator stack.
+- Keeps the install order explicit: Credential Broker script, Total Commander WFX install/registration, DMS Provider Bridge setup.
+- Delegates bridge elevation, Program Files installation, user AppData config location, service setup, and bridge health handling to the dedicated bridge setup.
+- Keeps Credential Broker startup, health wait, scheduled task setup, and broker config inside the broker install payload.
+- Documents that this installer owns orchestration and WFX registration only.
+
 ## [v0.5.0-beta] - 2026-06-14
 
 - Beta release candidate for external Total Commander testing.
@@ -170,4 +180,3 @@ All notable changes to this project will be documented in this file.
 
 - Build orchestrator now validates `prepare-payload.ps1` success correctly.
 - Build orchestrator no longer fails when `nssm.exe` source and destination paths are identical.
-

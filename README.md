@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/mergi72/dms-provider-installer/actions/workflows/ci.yml/badge.svg)](https://github.com/mergi72/dms-provider-installer/actions/workflows/ci.yml)
 [![Status](https://img.shields.io/badge/Status-Beta-yellowgreen)](https://github.com/mergi72/dms-provider-installer)
-[![Installer](https://img.shields.io/badge/Installer-v0.5.0--beta-blueviolet)](https://github.com/mergi72/dms-provider-installer/releases/tag/v0.5.0-beta)
+[![Installer](https://img.shields.io/badge/Installer-v0.7.14--beta-blueviolet)](https://github.com/mergi72/dms-provider-installer/releases/tag/v0.7.14-beta)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -15,20 +15,30 @@ It bundles and runs the dedicated installers in this order:
 - Total Commander WFX plugin
 - DMS Provider Bridge
 
-The orchestrator runs in the current user context. The credential broker installer owns broker deployment, per-user scheduled task setup, and broker config. The bridge installer owns its own elevation/admin flow, bridge executable deployment, service/task setup, NSSM usage, health checks, and machine/user config locations. This project owns only orchestration and Total Commander WFX installation/registration.
+The orchestrator runs in the current user context. The credential broker installer owns broker deployment, per-user scheduled task setup, startup, health wait, and broker config. The bridge installer owns its own elevation/admin flow, bridge executable deployment, service/task setup, NSSM usage, health checks, and machine/user config locations. This project owns only orchestration and Total Commander WFX installation/registration.
 
 ## What This Project Does
 
-- Bundles `DmsProviderBridgeSetup.exe`.
-- Bundles the Credential Broker runtime payload directly.
+- Bundles `DmsProviderBridgeSetup.exe` (the public bridge bootstrapper).
+- Bundles the Credential Broker runtime payload directly and runs its `install-broker.ps1` script.
 - Installs `TcWfxPlugin.wfx64` into the orchestrator user install root under `tc-wfx`.
 - Installs WFX `config.json` next to the plugin and under `tc-wfx\config`.
 - Installs WFX localization from `localize.json` under `tc-wfx\config`.
-- Installs the Credential Broker runtime first and bridge setup last.
+- Runs the install flow in this order: Credential Broker script, Total Commander WFX install/registration, DMS Provider Bridge setup.
 - Optionally verifies the bridge health endpoint.
 - Registers the WFX plugin in Total Commander `wincmd.ini` under `[FileSystemPlugins64]`.
 - Creates a `wincmd.ini` backup before modification.
 
+## Install Flow
+
+1. Credential Broker files are copied to `%LOCALAPPDATA%\Credential Broker` by Inno Setup.
+2. The orchestrator runs `%LOCALAPPDATA%\Credential Broker\install-broker.ps1` and waits for that script to finish.
+3. The orchestrator installs `TcWfxPlugin.wfx64`, `config.json`, and `localize.json` under its own `tc-wfx` directory.
+4. The orchestrator registers the WFX plugin in Total Commander `wincmd.ini` when the file can be found.
+5. The orchestrator starts the bundled `DmsProviderBridgeSetup.exe` and waits for that setup to finish.
+6. The orchestrator optionally checks bridge health at `http://127.0.0.1:8765/health`.
+
+The orchestrator does not create bridge config directories, does not set bridge config environment variables directly, and does not install the bridge service by itself.
 ## What This Project Does Not Own
 
 - Bridge config files.
@@ -60,7 +70,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.5.0-beta.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.7.14-beta.exe`
 
 Prepare payload only:
 
@@ -90,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1
 Useful options:
 
 ```powershell
--BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.5.0-beta.exe
+-BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.7.14-beta.exe
 -BrokerInstallRoot C:\Users\<user>\AppData\Local\Credential Broker
 -WfxPluginPath C:\path\TcWfxPlugin.wfx64
 -PluginConfigPath C:\path\config.json
@@ -116,4 +126,3 @@ Manual WFX cleanup:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1
 ```
-
