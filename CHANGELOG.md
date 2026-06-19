@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.15-beta] - 2026-06-19
+
+### Changed
+
+- Refreshed the orchestrator installer for the current bridge v0.7.14-beta payload.
+- Keeps the install order explicit: Credential Broker script, Total Commander WFX install/registration, DMS Provider Bridge setup.
+- Release/version bump to v0.7.15-beta.
+
 ## [v0.7.14-beta] - 2026-06-19
 
 ### Changed

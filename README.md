@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/mergi72/dms-provider-installer/actions/workflows/ci.yml/badge.svg)](https://github.com/mergi72/dms-provider-installer/actions/workflows/ci.yml)
 [![Status](https://img.shields.io/badge/Status-Beta-yellowgreen)](https://github.com/mergi72/dms-provider-installer)
-[![Installer](https://img.shields.io/badge/Installer-v0.7.14--beta-blueviolet)](https://github.com/mergi72/dms-provider-installer/releases/tag/v0.7.14-beta)
+[![Installer](https://img.shields.io/badge/Installer-v0.7.15--beta-blueviolet)](https://github.com/mergi72/dms-provider-installer/releases/tag/v0.7.15-beta)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -70,7 +70,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.7.14-beta.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.7.15-beta.exe`
 
 Prepare payload only:
 
