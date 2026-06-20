@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/mergi72/dms-provider-installer/actions/workflows/ci.yml/badge.svg)](https://github.com/mergi72/dms-provider-installer/actions/workflows/ci.yml)
 [![Status](https://img.shields.io/badge/Status-Beta-yellowgreen)](https://github.com/mergi72/dms-provider-installer)
-[![Installer](https://img.shields.io/badge/Installer-v0.7.15--beta-blueviolet)](https://github.com/mergi72/dms-provider-installer/releases/tag/v0.7.15-beta)
+[![Installer](https://img.shields.io/github/v/release/mergi72/dms-provider-installer?include_prereleases&label=Installer&color=blueviolet)](https://github.com/mergi72/dms-provider-installer/releases/latest)
 
 Current development branch: `develop`  
 Stable release branch: `main`
@@ -70,7 +70,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.7.15-beta.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.7.16-beta.exe`
 
 Prepare payload only:
 
@@ -100,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1
 Useful options:
 
 ```powershell
--BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.7.14-beta.exe
+-BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.7.20-beta.exe
 -BrokerInstallRoot C:\Users\<user>\AppData\Local\Credential Broker
 -WfxPluginPath C:\path\TcWfxPlugin.wfx64
 -PluginConfigPath C:\path\config.json
