@@ -36,8 +36,8 @@ jobs:
           $iss = Get-Content -Path installer.iss -Raw
           foreach ($expected in @(
             "AppName=DMS Provider Installer",
-            "AppVersion=0.7.15-beta",
-            "OutputBaseFilename=DmsProviderInstaller-v0.7.15-beta"
+            "AppVersion=0.7.16-beta",
+            "OutputBaseFilename=DmsProviderInstaller-v0.7.16-beta"
           )) {
             if (-not $iss.Contains($expected)) {
               throw "installer.iss is missing expected metadata: $expected"
@@ -58,7 +58,7 @@ jobs:
             (Join-Path $wfx "artifacts/TcWfxPlugin-win-x64"), `
             (Join-Path $wfx "config") | Out-Null
 
-          Set-Content -Path (Join-Path $bridge "artifacts/installer/DmsProviderBridgeSetup-v0.7.15-beta.exe") -Value "mock bridge setup"
+          Set-Content -Path (Join-Path $bridge "artifacts/installer/DmsProviderBridgeSetup-v0.7.16-beta.exe") -Value "mock bridge setup"
 
           Set-Content -Path (Join-Path $broker "artifacts/broker-installer-payload/credential-broker.exe") -Value "mock broker exe"
           Set-Content -Path (Join-Path $broker "artifacts/broker-installer-payload/install-broker.ps1") -Value "Write-Host 'mock install'"
