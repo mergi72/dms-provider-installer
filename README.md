@@ -70,7 +70,7 @@ The build script:
 
 Output:
 
-- `artifacts\installer\DmsProviderInstaller-v0.7.16-beta.exe`
+- `artifacts\installer\DmsProviderInstaller-v0.7.17-beta.exe`
 
 Prepare payload only:
 
@@ -100,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-wrapper.ps1
 Useful options:
 
 ```powershell
--BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.7.20-beta.exe
+-BridgeSetupPath C:\path\DmsProviderBridgeSetup-v0.9.8-beta.exe
 -BrokerInstallRoot C:\Users\<user>\AppData\Local\Credential Broker
 -WfxPluginPath C:\path\TcWfxPlugin.wfx64
 -PluginConfigPath C:\path\config.json

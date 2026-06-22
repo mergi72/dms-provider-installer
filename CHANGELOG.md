@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.17-beta] - 2026-06-22
+
+### Changed
+
+- Refreshed the orchestrator installer for the current bridge v0.9.8-beta payload.
+- Release/version bump to v0.7.17-beta.
+
 ## [v0.7.16-beta] - 2026-06-20
 
 ### Changed
