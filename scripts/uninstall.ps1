@@ -1,19 +1,9 @@
 param(
-    [string]$InstallRoot = "$env:ProgramFiles\DMS Provider",
+    [string]$InstallRoot = "$env:LOCALAPPDATA\Programs\DMS Provider",
     [switch]$KeepWfxFiles
 )
 
 $ErrorActionPreference = "Stop"
-
-function Test-IsAdministrator {
-    $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = [Security.Principal.WindowsPrincipal]::new($currentIdentity)
-    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-if (-not (Test-IsAdministrator)) {
-    throw "Uninstall requires elevated PowerShell (Run as Administrator)."
-}
 
 $wfxRoot = Join-Path $InstallRoot "tc-wfx"
 

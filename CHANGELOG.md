@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0] - 2026-06-23
+
+### Changed
+
+- First stable orchestrator installer release for the DMS Provider desktop stack.
+- Refreshed bundled payloads for DMS Provider Bridge v1.0.0, Credential Broker v1.0.0, and tc-wfx-plugin v1.0.0.
+- Updated release metadata and README badges from beta to v1.0.0.
+- Aligned user-mode uninstall defaults with the installer root under `%LOCALAPPDATA%\Programs\DMS Provider` and removed the unnecessary administrator requirement.
+
 ## [v0.7.17-beta] - 2026-06-22
 
 ### Changed
